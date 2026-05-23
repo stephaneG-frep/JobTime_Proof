@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io' show Platform;
 
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
@@ -102,18 +103,28 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
               : () async {
                   var opened = false;
 
-                  if (platformAppUrl != null) {
-                    opened = await launchUrl(
-                      platformAppUrl,
-                      mode: LaunchMode.externalNonBrowserApplication,
-                    );
+                  final isMobile = Platform.isAndroid || Platform.isIOS;
+
+                  if (isMobile && platformAppUrl != null) {
+                    try {
+                      opened = await launchUrl(
+                        platformAppUrl,
+                        mode: LaunchMode.externalNonBrowserApplication,
+                      );
+                    } catch (_) {
+                      opened = false;
+                    }
                   }
 
                   if (!opened && platformWebUrl != null) {
-                    opened = await launchUrl(
-                      platformWebUrl,
-                      mode: LaunchMode.externalApplication,
-                    );
+                    try {
+                      opened = await launchUrl(
+                        platformWebUrl,
+                        mode: LaunchMode.platformDefault,
+                      );
+                    } catch (_) {
+                      opened = false;
+                    }
                   }
 
                   if (opened && !sessionProvider.isRunning) {

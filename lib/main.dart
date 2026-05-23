@@ -8,6 +8,7 @@ import 'screens/history_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/session_timer_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/help_screen.dart';
 import 'services/hive_service.dart';
 
 Future<void> main() async {
@@ -46,6 +47,7 @@ class _JobTimeProofAppState extends State<JobTimeProofApp> {
     HistoryScreen(),
     ReportScreen(),
     SettingsScreen(),
+    HelpScreen(),
   ];
 
   @override
@@ -124,6 +126,10 @@ class _JobTimeProofAppState extends State<JobTimeProofApp> {
                   NavigationDestination(
                     icon: Icon(Icons.settings_outlined),
                     label: 'Paramètres',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    label: 'Aide',
                   ),
                 ],
               ),

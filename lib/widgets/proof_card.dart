@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 import '../models/job_proof.dart';
 
 class ProofCard extends StatelessWidget {
-  const ProofCard({super.key, required this.proof});
+  const ProofCard({super.key, required this.proof, this.onShowQr});
 
   final JobProof proof;
+  final VoidCallback? onShowQr;
 
   IconData _icon(JobProofType type) {
     switch (type) {
@@ -33,6 +34,13 @@ class ProofCard extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
+        trailing: proof.url != null && proof.url!.trim().isNotEmpty
+            ? IconButton(
+                onPressed: onShowQr,
+                icon: const Icon(Icons.qr_code_2),
+                tooltip: 'Afficher QR',
+              )
+            : null,
       ),
     );
   }

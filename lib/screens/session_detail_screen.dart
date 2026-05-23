@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/job_proof.dart';
 import '../models/job_session.dart';
@@ -78,7 +79,41 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           if (activeSession.proofs.isEmpty)
             const Text('Aucune preuve pour cette session.')
           else
-            ...activeSession.proofs.map((p) => ProofCard(proof: p)),
+            ...activeSession.proofs.map(
+              (p) => ProofCard(
+                proof: p,
+                onShowQr: p.url != null && p.url!.trim().isNotEmpty
+                    ? () => _showQrDialog(context, p.title, p.url!)
+                    : null,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showQrDialog(
+    BuildContext context,
+    String title,
+    String url,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('QR - $title'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            QrImageView(data: url, version: QrVersions.auto, size: 220),
+            const SizedBox(height: 8),
+            SelectableText(url, textAlign: TextAlign.center),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
         ],
       ),
     );

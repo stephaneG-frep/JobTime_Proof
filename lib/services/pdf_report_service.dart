@@ -78,10 +78,47 @@ class PdfReportService {
                   ),
                   if (s.notes.trim().isNotEmpty)
                     pw.Text('Notes: ${s.notes.trim()}'),
-                  if (s.proofs.isNotEmpty)
+                  if (s.proofs.isNotEmpty) ...[
                     pw.Text(
                       'Preuves: ${s.proofs.map((p) => p.title).join(' | ')}',
                     ),
+                    pw.SizedBox(height: 6),
+                    ...s.proofs
+                        .where(
+                          (p) =>
+                              p.url != null &&
+                              p.url!.trim().isNotEmpty &&
+                              p.type.name == 'url',
+                        )
+                        .map(
+                          (p) => pw.Padding(
+                            padding: const pw.EdgeInsets.only(bottom: 6),
+                            child: pw.Row(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: pw.BoxDecoration(
+                                    border: pw.Border.all(width: 0.5),
+                                  ),
+                                  child: pw.BarcodeWidget(
+                                    barcode: pw.Barcode.qrCode(),
+                                    data: p.url!.trim(),
+                                  ),
+                                ),
+                                pw.SizedBox(width: 8),
+                                pw.Expanded(
+                                  child: pw.Text(
+                                    'QR ${p.title}: ${p.url!.trim()}',
+                                    style: const pw.TextStyle(fontSize: 10),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                  ],
                 ],
               ),
             ),
