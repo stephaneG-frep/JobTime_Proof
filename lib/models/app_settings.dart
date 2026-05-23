@@ -91,14 +91,28 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
 
     final now = DateTime.now();
     final rawPlatforms = fields[1] as List?;
+    final f2 = fields[2];
+    final f3 = fields[3];
+    final f4 = fields[4];
+    final f5 = fields[5];
+    final f6 = fields[6];
+
+    // Backward compatibility:
+    // - legacy format stored createdAt/updatedAt in fields 2/3
+    // - newer format stores custom "Autre" URLs in 2/3 and dates in 4/5
+    final legacyCreatedAt = f2 is DateTime ? f2 : null;
+    final legacyUpdatedAt = f3 is DateTime ? f3 : null;
+    final modernCreatedAt = f4 is DateTime ? f4 : null;
+    final modernUpdatedAt = f5 is DateTime ? f5 : null;
+
     return AppSettings(
       weeklyGoalHours: (fields[0] as int?) ?? 10,
       customPlatforms: (rawPlatforms ?? const <dynamic>[]).cast<String>(),
-      otherPlatformWebUrl: (fields[2] as String?) ?? '',
-      otherPlatformAppScheme: (fields[3] as String?) ?? '',
-      darkModeEnabled: (fields[6] as bool?) ?? false,
-      createdAt: (fields[4] as DateTime?) ?? now,
-      updatedAt: (fields[5] as DateTime?) ?? now,
+      otherPlatformWebUrl: f2 is String ? f2 : '',
+      otherPlatformAppScheme: f3 is String ? f3 : '',
+      darkModeEnabled: f6 is bool ? f6 : false,
+      createdAt: modernCreatedAt ?? legacyCreatedAt ?? now,
+      updatedAt: modernUpdatedAt ?? legacyUpdatedAt ?? now,
     );
   }
 
