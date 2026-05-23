@@ -67,10 +67,13 @@ class _JobTimeProofAppState extends State<JobTimeProofApp> {
 
   @override
   Widget build(BuildContext context) {
+    final darkMode = context.watch<SettingsProvider>().settings.darkModeEnabled;
     const deepBlue = Color(0xFF123A6F);
     const offWhite = Color(0xFFF6F7FB);
     const validationGreen = Color(0xFF2E9E5B);
     const softOrange = Color(0xFFE59A43);
+    const darkSurface = Color(0xFF11161F);
+    const darkCard = Color(0xFF1A2230);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -98,6 +101,26 @@ class _JobTimeProofAppState extends State<JobTimeProofApp> {
           foregroundColor: deepBlue,
         ),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: deepBlue,
+          primary: const Color(0xFF9CC3FF),
+          secondary: const Color(0xFF69C98B),
+          tertiary: softOrange,
+          surface: darkSurface,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: darkSurface,
+        cardTheme: CardThemeData(
+          color: darkCard,
+          elevation: 0.6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+      themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
       home: !_ready
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : Scaffold(

@@ -51,6 +51,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Thème sombre'),
+                  subtitle: const Text('Active le mode sombre dans toute l’application'),
+                  value: settingsProvider.settings.darkModeEnabled,
+                  onChanged: (value) => settingsProvider.setDarkMode(value),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   'Objectif hebdomadaire (${settingsProvider.settings.weeklyGoalHours} h)',
                 ),

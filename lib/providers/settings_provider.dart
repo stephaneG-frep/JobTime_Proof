@@ -4,7 +4,7 @@ import '../models/app_settings.dart';
 import '../services/hive_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
-  late AppSettings _settings;
+  AppSettings _settings = AppSettings.initial();
 
   AppSettings get settings => _settings;
 
@@ -70,6 +70,12 @@ class SettingsProvider extends ChangeNotifier {
       otherPlatformWebUrl: webUrl.trim(),
       otherPlatformAppScheme: appScheme.trim(),
     );
+    await HiveService.settingsBox.put('main', _settings);
+    notifyListeners();
+  }
+
+  Future<void> setDarkMode(bool enabled) async {
+    _settings = _settings.copyWith(darkModeEnabled: enabled);
     await HiveService.settingsBox.put('main', _settings);
     notifyListeners();
   }

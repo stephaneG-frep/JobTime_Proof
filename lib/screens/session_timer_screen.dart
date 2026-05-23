@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/quick_start_card.dart';
 
 class SessionTimerScreen extends StatefulWidget {
   const SessionTimerScreen({super.key});
@@ -38,6 +39,38 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
     final m = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
     final s = (seconds % 60).toString().padLeft(2, '0');
     return '$h:$m:$s';
+  }
+
+  Future<bool> _openPlatform({
+    required Uri? platformWebUrl,
+    required Uri? platformAppUrl,
+  }) async {
+    var opened = false;
+    final isMobile = Platform.isAndroid || Platform.isIOS;
+
+    if (isMobile && platformAppUrl != null) {
+      try {
+        opened = await launchUrl(
+          platformAppUrl,
+          mode: LaunchMode.externalNonBrowserApplication,
+        );
+      } catch (_) {
+        opened = false;
+      }
+    }
+
+    if (!opened && platformWebUrl != null) {
+      try {
+        opened = await launchUrl(
+          platformWebUrl,
+          mode: LaunchMode.platformDefault,
+        );
+      } catch (_) {
+        opened = false;
+      }
+    }
+
+    return opened;
   }
 
   @override
@@ -97,36 +130,16 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
           },
         ),
         const SizedBox(height: 12),
-        FilledButton.tonalIcon(
+        QuickStartCard(
+          platform: sessionProvider.selectedPlatform,
+          enabled: platformWebUrl != null,
           onPressed: platformWebUrl == null
               ? null
               : () async {
-                  var opened = false;
-
-                  final isMobile = Platform.isAndroid || Platform.isIOS;
-
-                  if (isMobile && platformAppUrl != null) {
-                    try {
-                      opened = await launchUrl(
-                        platformAppUrl,
-                        mode: LaunchMode.externalNonBrowserApplication,
-                      );
-                    } catch (_) {
-                      opened = false;
-                    }
-                  }
-
-                  if (!opened && platformWebUrl != null) {
-                    try {
-                      opened = await launchUrl(
-                        platformWebUrl,
-                        mode: LaunchMode.platformDefault,
-                      );
-                    } catch (_) {
-                      opened = false;
-                    }
-                  }
-
+                  final opened = await _openPlatform(
+                    platformWebUrl: platformWebUrl,
+                    platformAppUrl: platformAppUrl,
+                  );
                   if (opened && !sessionProvider.isRunning) {
                     sessionProvider.startSession();
                   }
@@ -140,12 +153,6 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                     );
                   }
                 },
-          icon: const Icon(Icons.open_in_new),
-          label: Text(
-            platformWebUrl == null
-                ? 'Aucun site pour cette plateforme'
-                : 'Ouvrir la plateforme',
-          ),
         ),
         const SizedBox(height: 12),
         TextField(

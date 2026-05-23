@@ -6,6 +6,7 @@ class AppSettings {
     required this.customPlatforms,
     required this.otherPlatformWebUrl,
     required this.otherPlatformAppScheme,
+    required this.darkModeEnabled,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -14,6 +15,7 @@ class AppSettings {
   final List<String> customPlatforms;
   final String otherPlatformWebUrl;
   final String otherPlatformAppScheme;
+  final bool darkModeEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -22,6 +24,7 @@ class AppSettings {
     List<String>? customPlatforms,
     String? otherPlatformWebUrl,
     String? otherPlatformAppScheme,
+    bool? darkModeEnabled,
   }) {
     return AppSettings(
       weeklyGoalHours: weeklyGoalHours ?? this.weeklyGoalHours,
@@ -29,6 +32,7 @@ class AppSettings {
       otherPlatformWebUrl: otherPlatformWebUrl ?? this.otherPlatformWebUrl,
       otherPlatformAppScheme:
           otherPlatformAppScheme ?? this.otherPlatformAppScheme,
+      darkModeEnabled: darkModeEnabled ?? this.darkModeEnabled,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );
@@ -41,6 +45,7 @@ class AppSettings {
       customPlatforms: const [],
       otherPlatformWebUrl: '',
       otherPlatformAppScheme: '',
+      darkModeEnabled: false,
       createdAt: now,
       updatedAt: now,
     );
@@ -51,6 +56,7 @@ class AppSettings {
     'customPlatforms': customPlatforms,
     'otherPlatformWebUrl': otherPlatformWebUrl,
     'otherPlatformAppScheme': otherPlatformAppScheme,
+    'darkModeEnabled': darkModeEnabled,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -62,6 +68,7 @@ class AppSettings {
             .cast<String>(),
     otherPlatformWebUrl: (json['otherPlatformWebUrl'] as String?) ?? '',
     otherPlatformAppScheme: (json['otherPlatformAppScheme'] as String?) ?? '',
+    darkModeEnabled: (json['darkModeEnabled'] as bool?) ?? false,
     createdAt:
         DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
         DateTime.now(),
@@ -89,6 +96,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       customPlatforms: (rawPlatforms ?? const <dynamic>[]).cast<String>(),
       otherPlatformWebUrl: (fields[2] as String?) ?? '',
       otherPlatformAppScheme: (fields[3] as String?) ?? '',
+      darkModeEnabled: (fields[6] as bool?) ?? false,
       createdAt: (fields[4] as DateTime?) ?? now,
       updatedAt: (fields[5] as DateTime?) ?? now,
     );
@@ -97,7 +105,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.weeklyGoalHours)
       ..writeByte(1)
@@ -109,6 +117,8 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(4)
       ..write(obj.createdAt)
       ..writeByte(5)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(6)
+      ..write(obj.darkModeEnabled);
   }
 }
