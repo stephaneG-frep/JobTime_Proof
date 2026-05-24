@@ -16,6 +16,7 @@ class SessionTimerScreen extends StatefulWidget {
 
 class _SessionTimerScreenState extends State<SessionTimerScreen> {
   final _notesController = TextEditingController();
+  final _manualUrlController = TextEditingController();
   final Map<String, Uri> _platformWebUrls = {
     'France Travail': Uri.parse('https://www.francetravail.fr'),
     'Indeed': Uri.parse('https://fr.indeed.com'),
@@ -99,6 +100,119 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 16),
+        if (sessionProvider.pendingSharedUrl != null)
+          Card(
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Lien partagé reçu',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  SelectableText(sessionProvider.pendingSharedUrl!),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () async {
+                            final sharedUrl =
+                                sessionProvider.consumePendingSharedUrl();
+                            if (sharedUrl == null || sharedUrl.isEmpty) return;
+                            final added = await sessionProvider
+                                .addUrlProofToLatestSession(url: sharedUrl);
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  added
+                                      ? 'Lien ajouté à la dernière session.'
+                                      : 'Aucune session existante. Crée une session puis réessaie.',
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.add_link),
+                          label: const Text('Ajouter à la dernière session'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: sessionProvider.clearPendingSharedUrl,
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Ignorer',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ajouter un lien manuellement',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _manualUrlController,
+                  decoration: const InputDecoration(
+                    hintText: 'https://...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final raw = _manualUrlController.text.trim();
+                    final uri = Uri.tryParse(raw);
+                    final valid = uri != null &&
+                        (uri.scheme == 'http' || uri.scheme == 'https') &&
+                        uri.host.isNotEmpty;
+                    if (!valid) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('URL invalide. Exemple: https://...'),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    final added = await sessionProvider.addUrlProofToLatestSession(
+                      url: raw,
+                      title: 'Lien ajouté manuellement',
+                    );
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          added
+                              ? 'Lien ajouté à la dernière session.'
+                              : 'Aucune session existante. Crée une session puis réessaie.',
+                        ),
+                      ),
+                    );
+                    if (added) _manualUrlController.clear();
+                  },
+                  icon: const Icon(Icons.add_link),
+                  label: const Text('Ajouter le lien'),
+                ),
+              ],
+            ),
+          ),
+        ),
         DropdownButtonFormField<String>(
           initialValue: sessionProvider.selectedPlatform,
           decoration: const InputDecoration(
@@ -244,6 +358,7 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
   @override
   void dispose() {
     _notesController.dispose();
+    _manualUrlController.dispose();
     super.dispose();
   }
 }

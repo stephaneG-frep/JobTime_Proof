@@ -1,13 +1,15 @@
 package com.example.jobtime_proof
 
 import android.content.Intent
+import android.content.Context
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val channelName = "jobtime_proof/share"
-    private var pendingSharedUrl: String? = null
+    private val prefsName = "jobtime_proof_prefs"
+    private val prefsKeySharedUrl = "pending_shared_url"
     private var channel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -15,8 +17,13 @@ class MainActivity : FlutterActivity() {
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
         channel?.setMethodCallHandler { call, result ->
             if (call.method == "getAndClearSharedUrl") {
-                result.success(pendingSharedUrl)
-                pendingSharedUrl = null
+                val sharedUrl = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    .getString(prefsKeySharedUrl, null)
+                result.success(sharedUrl)
+                getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    .edit()
+                    .remove(prefsKeySharedUrl)
+                    .apply()
             } else {
                 result.notImplemented()
             }
@@ -44,7 +51,10 @@ class MainActivity : FlutterActivity() {
         val url = extractFirstUrl(text)
         if (url.isNullOrBlank()) return
 
-        pendingSharedUrl = url
+        getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .edit()
+            .putString(prefsKeySharedUrl, url)
+            .apply()
         channel?.invokeMethod("onSharedUrl", url)
     }
 

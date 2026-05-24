@@ -83,6 +83,11 @@ class SessionProvider extends ChangeNotifier {
     return value;
   }
 
+  void clearPendingSharedUrl() {
+    _pendingSharedUrl = null;
+    notifyListeners();
+  }
+
   void startSession() {
     if (_isRunning && !_isPaused) return;
 
@@ -154,6 +159,26 @@ class SessionProvider extends ChangeNotifier {
     _sessions[index] = updated;
     await HiveService.sessionsBox.put(updated.id, updated);
     notifyListeners();
+  }
+
+  Future<bool> addUrlProofToLatestSession({
+    required String url,
+    String title = 'Annonce partagée',
+    String? description,
+  }) async {
+    if (_sessions.isEmpty) return false;
+    final latest = _sessions.first;
+    final proof = JobProof(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      sessionId: latest.id,
+      title: title,
+      type: JobProofType.url,
+      url: url.trim(),
+      description: description,
+      createdAt: DateTime.now(),
+    );
+    await addProof(latest.id, proof);
+    return true;
   }
 
   Future<void> updateSession(JobSession updated) async {
