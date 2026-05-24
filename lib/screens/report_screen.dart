@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/job_session.dart';
 import '../providers/session_provider.dart';
 import '../services/pdf_report_service.dart';
 
@@ -14,10 +16,29 @@ class ReportScreen extends StatefulWidget {
 class _ReportScreenState extends State<ReportScreen> {
   DateTimeRange? _range;
   final _pdfService = PdfReportService();
+  final _dateFormat = DateFormat('dd/MM/yyyy');
+
+  String _formatDuration(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    return '${hours}h ${minutes.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SessionProvider>();
+    final from = _range?.start;
+    final to = _range?.end;
+    final sessions = (from != null && to != null)
+        ? provider.sessionsForPeriod(from, to)
+        : <JobSession>[];
+    final totalSeconds = sessions.fold<int>(
+      0,
+      (sum, s) => sum + s.durationSeconds,
+    );
+    final applicationsCount = sessions
+        .where((s) => s.actionType.toLowerCase().contains('candidature'))
+        .length;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -33,7 +54,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 Text(
                   _range == null
                       ? 'Sélectionnez une période'
-                      : 'Période: ${_range!.start.day}/${_range!.start.month}/${_range!.start.year} - ${_range!.end.day}/${_range!.end.month}/${_range!.end.year}',
+                      : 'Période: ${_dateFormat.format(_range!.start)} - ${_dateFormat.format(_range!.end)}',
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
@@ -51,9 +72,32 @@ class _ReportScreenState extends State<ReportScreen> {
                   icon: const Icon(Icons.date_range),
                   label: const Text('Choisir la période'),
                 ),
+                if (_range != null) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Chip(
+                        avatar: const Icon(Icons.timer_outlined, size: 18),
+                        label: Text(
+                          'Temps total: ${_formatDuration(totalSeconds)}',
+                        ),
+                      ),
+                      Chip(
+                        avatar: const Icon(Icons.history, size: 18),
+                        label: Text('Sessions: ${sessions.length}'),
+                      ),
+                      Chip(
+                        avatar: const Icon(Icons.send_outlined, size: 18),
+                        label: Text('Candidatures: $applicationsCount'),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: _range == null
+                  onPressed: _range == null || sessions.isEmpty
                       ? null
                       : () async {
                           final sessions = provider.sessionsForPeriod(
@@ -76,6 +120,13 @@ class _ReportScreenState extends State<ReportScreen> {
                   icon: const Icon(Icons.picture_as_pdf),
                   label: const Text('Générer le rapport PDF'),
                 ),
+                if (_range != null && sessions.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: Text(
+                      'Aucune session sur cette période. Choisissez une autre plage de dates.',
+                    ),
+                  ),
               ],
             ),
           ),

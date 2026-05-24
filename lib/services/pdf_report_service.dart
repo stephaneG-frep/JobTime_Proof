@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
@@ -11,7 +12,8 @@ class PdfReportService {
     required List<JobSession> sessions,
   }) async {
     final pdf = pw.Document();
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'fr_FR');
+    final shortDateFormat = DateFormat('dd/MM/yyyy', 'fr_FR');
 
     final totalSeconds = sessions.fold<int>(
       0,
@@ -34,7 +36,7 @@ class PdfReportService {
             ),
           ),
           pw.Text(
-            'Période: ${DateFormat('dd/MM/yyyy').format(from)} au ${DateFormat('dd/MM/yyyy').format(to)}',
+            'Période: ${shortDateFormat.format(from)} au ${shortDateFormat.format(to)}',
           ),
           pw.SizedBox(height: 10),
           pw.Text('Date de génération: ${dateFormat.format(DateTime.now())}'),
@@ -58,24 +60,83 @@ class PdfReportService {
             style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 8),
+          pw.Table(
+            border: pw.TableBorder.all(width: 0.5),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(2.2),
+              1: pw.FlexColumnWidth(2.4),
+              2: pw.FlexColumnWidth(2.4),
+              3: pw.FlexColumnWidth(1.2),
+            },
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      'Plateforme / Action',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      'Début',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      'Fin',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      'Durée',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              ...sessions.map(
+                (s) => pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text('${s.platform}\n${s.actionType}'),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(dateFormat.format(s.startTime)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(dateFormat.format(s.endTime)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(
+                        '${(s.durationSeconds / 60).toStringAsFixed(1)} min',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 12),
           ...sessions.map(
             (s) => pw.Container(
               margin: const pw.EdgeInsets.only(bottom: 8),
               padding: const pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
+              decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.4)),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text(
-                    '${s.platform} - ${s.actionType}',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.Text(
-                    'Début: ${dateFormat.format(s.startTime)} | Fin: ${dateFormat.format(s.endTime)}',
-                  ),
-                  pw.Text(
-                    'Durée: ${(s.durationSeconds / 60).toStringAsFixed(1)} min',
-                  ),
                   if (s.notes.trim().isNotEmpty)
                     pw.Text('Notes: ${s.notes.trim()}'),
                   if (s.proofs.isNotEmpty) ...[
@@ -97,8 +158,8 @@ class PdfReportService {
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
                                 pw.Container(
-                                  width: 60,
-                                  height: 60,
+                                  width: 56,
+                                  height: 56,
                                   decoration: pw.BoxDecoration(
                                     border: pw.Border.all(width: 0.5),
                                   ),

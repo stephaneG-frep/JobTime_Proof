@@ -108,7 +108,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 label: Text(
                   _range == null
                       ? 'Filtrer par date'
-                      : '${DateFormat('dd/MM').format(_range!.start)} - ${DateFormat('dd/MM').format(_range!.end)}',
+                      : '${DateFormat('dd/MM/yyyy').format(_range!.start)} - ${DateFormat('dd/MM/yyyy').format(_range!.end)}',
                 ),
               ),
             ],

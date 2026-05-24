@@ -11,7 +11,7 @@ class SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = DateFormat('dd/MM HH:mm').format(session.startTime);
+    final start = DateFormat('dd/MM/yyyy HH:mm').format(session.startTime);
     final duration = '${(session.durationSeconds / 60).toStringAsFixed(0)} min';
 
     return Card(
