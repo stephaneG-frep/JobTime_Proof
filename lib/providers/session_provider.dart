@@ -25,18 +25,28 @@ class SessionProvider extends ChangeNotifier {
   String get selectedActionType => _selectedActionType;
 
   DateTime? _runningStart;
-  int _elapsedSeconds = 0;
+  int _elapsedBeforeCurrentRun = 0;
+  DateTime? _lastRunResumedAt;
   Timer? _timer;
   bool _isRunning = false;
   bool _isPaused = false;
 
   String _draftNotes = '';
+  String? _pendingSharedUrl;
 
   DateTime? get runningStart => _runningStart;
-  int get elapsedSeconds => _elapsedSeconds;
+  int get elapsedSeconds {
+    if (!_isRunning || _isPaused || _lastRunResumedAt == null) {
+      return _elapsedBeforeCurrentRun;
+    }
+    final delta = DateTime.now().difference(_lastRunResumedAt!).inSeconds;
+    return _elapsedBeforeCurrentRun + (delta < 0 ? 0 : delta);
+  }
+
   bool get isRunning => _isRunning;
   bool get isPaused => _isPaused;
   String get draftNotes => _draftNotes;
+  String? get pendingSharedUrl => _pendingSharedUrl;
 
   Future<void> load() async {
     _sessions = HiveService.sessionsBox.values.toList()
@@ -59,20 +69,35 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setPendingSharedUrl(String? url) {
+    final trimmed = url?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+    _pendingSharedUrl = trimmed;
+    notifyListeners();
+  }
+
+  String? consumePendingSharedUrl() {
+    final value = _pendingSharedUrl;
+    _pendingSharedUrl = null;
+    notifyListeners();
+    return value;
+  }
+
   void startSession() {
     if (_isRunning && !_isPaused) return;
 
     if (_runningStart == null) {
       _runningStart = DateTime.now();
-      _elapsedSeconds = 0;
+      _elapsedBeforeCurrentRun = 0;
     }
 
     _isRunning = true;
     _isPaused = false;
+    _lastRunResumedAt = DateTime.now();
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _elapsedSeconds++;
+      // Tick only drives UI refresh; elapsed time is based on real timestamps.
       notifyListeners();
     });
     notifyListeners();
@@ -81,6 +106,8 @@ class SessionProvider extends ChangeNotifier {
   void pauseSession() {
     if (!_isRunning || _isPaused) return;
     _timer?.cancel();
+    _elapsedBeforeCurrentRun = elapsedSeconds;
+    _lastRunResumedAt = null;
     _isPaused = true;
     notifyListeners();
   }
@@ -96,7 +123,7 @@ class SessionProvider extends ChangeNotifier {
       actionType: _selectedActionType,
       startTime: _runningStart!,
       endTime: now,
-      durationSeconds: _elapsedSeconds,
+      durationSeconds: elapsedSeconds,
       notes: _draftNotes.trim(),
       proofs: const [],
       createdAt: now,
@@ -107,7 +134,8 @@ class SessionProvider extends ChangeNotifier {
     _sessions.insert(0, session);
 
     _runningStart = null;
-    _elapsedSeconds = 0;
+    _elapsedBeforeCurrentRun = 0;
+    _lastRunResumedAt = null;
     _isRunning = false;
     _isPaused = false;
     _draftNotes = '';

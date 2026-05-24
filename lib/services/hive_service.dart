@@ -17,8 +17,18 @@ class HiveService {
       ..registerAdapter(JobSessionAdapter())
       ..registerAdapter(AppSettingsAdapter());
 
-    await Hive.openBox<JobSession>(sessionsBoxName);
-    await Hive.openBox<AppSettings>(settingsBoxName);
+    await _openBoxSafe<JobSession>(sessionsBoxName);
+    await _openBoxSafe<AppSettings>(settingsBoxName);
+  }
+
+  // Prevent app startup freeze if local Hive data becomes incompatible.
+  static Future<void> _openBoxSafe<T>(String boxName) async {
+    try {
+      await Hive.openBox<T>(boxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(boxName);
+      await Hive.openBox<T>(boxName);
+    }
   }
 
   static Box<JobSession> get sessionsBox =>

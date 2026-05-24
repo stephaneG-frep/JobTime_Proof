@@ -55,6 +55,50 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (provider.pendingSharedUrl != null)
+            Card(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Lien partagé détecté',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    SelectableText(provider.pendingSharedUrl!),
+                    const SizedBox(height: 10),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        final sharedUrl = provider.consumePendingSharedUrl();
+                        if (sharedUrl == null || sharedUrl.isEmpty) return;
+                        final proof = JobProof(
+                          id: DateTime.now().microsecondsSinceEpoch.toString(),
+                          sessionId: activeSession.id,
+                          title: 'Annonce partagée',
+                          type: JobProofType.url,
+                          url: sharedUrl,
+                          createdAt: DateTime.now(),
+                        );
+                        await provider.addProof(activeSession.id, proof);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lien ajouté en preuve URL.'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.link),
+                      label: const Text('Ajouter en preuve URL'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Text(
             '${activeSession.platform} - ${activeSession.actionType}',
             style: Theme.of(context).textTheme.titleLarge,
@@ -186,6 +230,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               }
               if (type == JobProofType.pdf) path = await _fileService.pickPdf();
               if (type == JobProofType.url) url = urlCtrl.text.trim();
+              if ((type == JobProofType.pdf || type == JobProofType.image) &&
+                  (path == null || path.trim().isEmpty)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Aucun fichier sélectionné pour la preuve.',
+                      ),
+                    ),
+                  );
+                }
+                return;
+              }
+              if (type == JobProofType.url && (url == null || url.isEmpty)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Veuillez saisir une URL valide.'),
+                    ),
+                  );
+                }
+                return;
+              }
 
               final proof = JobProof(
                 id: DateTime.now().microsecondsSinceEpoch.toString(),

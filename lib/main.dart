@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/session_provider.dart';
@@ -37,7 +39,11 @@ class JobTimeProofApp extends StatefulWidget {
   State<JobTimeProofApp> createState() => _JobTimeProofAppState();
 }
 
-class _JobTimeProofAppState extends State<JobTimeProofApp> {
+class _JobTimeProofAppState extends State<JobTimeProofApp>
+    with WidgetsBindingObserver {
+  static const MethodChannel _shareChannel = MethodChannel(
+    'jobtime_proof/share',
+  );
   int _index = 0;
   bool _ready = false;
 
@@ -53,6 +59,8 @@ class _JobTimeProofAppState extends State<JobTimeProofApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _shareChannel.setMethodCallHandler(_handleNativeMethodCall);
     _bootstrap();
   }
 
@@ -62,7 +70,40 @@ class _JobTimeProofAppState extends State<JobTimeProofApp> {
 
     await settings.load();
     await sessions.load();
+    await _pullSharedUrlFromNative();
     if (mounted) setState(() => _ready = true);
+  }
+
+  Future<void> _pullSharedUrlFromNative() async {
+    try {
+      final url = await _shareChannel.invokeMethod<String>(
+        'getAndClearSharedUrl',
+      );
+      if (!mounted || url == null || url.trim().isEmpty) return;
+      context.read<SessionProvider>().setPendingSharedUrl(url);
+    } catch (_) {
+      // Ignore native channel errors to keep app startup resilient.
+    }
+  }
+
+  Future<void> _handleNativeMethodCall(MethodCall call) async {
+    if (call.method != 'onSharedUrl') return;
+    final sharedUrl = call.arguments as String?;
+    if (!mounted || sharedUrl == null || sharedUrl.trim().isEmpty) return;
+    context.read<SessionProvider>().setPendingSharedUrl(sharedUrl);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _pullSharedUrlFromNative();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -78,6 +119,13 @@ class _JobTimeProofAppState extends State<JobTimeProofApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'JobTime Proof',
+      locale: const Locale('fr', 'FR'),
+      supportedLocales: const [Locale('fr', 'FR')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
