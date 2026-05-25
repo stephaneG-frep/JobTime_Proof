@@ -124,21 +124,16 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                             final sharedUrl =
                                 sessionProvider.consumePendingSharedUrl();
                             if (sharedUrl == null || sharedUrl.isEmpty) return;
-                            final added = await sessionProvider
-                                .addUrlProofToLatestSession(url: sharedUrl);
+                            sessionProvider.addDraftUrl(sharedUrl);
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  added
-                                      ? 'Lien ajouté à la dernière session.'
-                                      : 'Aucune session existante. Crée une session puis réessaie.',
-                                ),
+                              const SnackBar(
+                                content: Text('Lien ajouté à la session en cours.'),
                               ),
                             );
                           },
                           icon: const Icon(Icons.add_link),
-                          label: const Text('Ajouter à la dernière session'),
+                          label: const Text('Ajouter à la session en cours'),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -161,7 +156,7 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Ajouter un lien manuellement',
+                  'Ajouter un lien (session en cours)',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -190,25 +185,42 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                       }
                       return;
                     }
-                    final added = await sessionProvider.addUrlProofToLatestSession(
-                      url: raw,
-                      title: 'Lien ajouté manuellement',
-                    );
+                    sessionProvider.addDraftUrl(raw);
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          added
-                              ? 'Lien ajouté à la dernière session.'
-                              : 'Aucune session existante. Crée une session puis réessaie.',
-                        ),
+                      const SnackBar(
+                        content: Text('Lien ajouté à la session en cours.'),
                       ),
                     );
-                    if (added) _manualUrlController.clear();
+                    _manualUrlController.clear();
                   },
                   icon: const Icon(Icons.add_link),
                   label: const Text('Ajouter le lien'),
                 ),
+                if (sessionProvider.draftUrls.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Text(
+                    'URLs en attente (seront sauvegardées à la fin)',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  ...sessionProvider.draftUrls.asMap().entries.map(
+                    (entry) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.link, size: 18),
+                      title: Text(
+                        entry.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: IconButton(
+                        onPressed: () =>
+                            sessionProvider.removeDraftUrlAt(entry.key),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

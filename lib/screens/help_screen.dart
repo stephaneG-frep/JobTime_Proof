@@ -66,6 +66,7 @@ class HelpScreen extends StatelessWidget {
               'Sélectionnez une période.',
               'Vérifiez les stats (temps, sessions, candidatures) puis générez le PDF.',
               'Le PDF inclut toutes les preuves: images, PDF, liens (avec QR), notes.',
+              'Utilisez aussi Rapport prêt à présenter pour une version synthétique (plus courte).',
             ],
           ),
           _HelpSection(
@@ -78,6 +79,7 @@ class HelpScreen extends StatelessWidget {
               'Configurez la plateforme Autre (schéma app + URL web).',
               'Configurez l\'IA: clé API OpenAI + modèle (gpt-4.1-mini, gpt-4.1, gpt-4o-mini).',
               'Exportez/Importez vos données JSON.',
+              'Une sauvegarde JSON automatique est lancée une fois par jour au démarrage.',
             ],
           ),
           _HelpSection(
@@ -118,6 +120,7 @@ class HelpScreen extends StatelessWidget {
                   Text('• Si le chrono ne tourne pas, relancez une session.'),
                   Text('• Si un lien partagé n\'apparaît pas, utilisez l\'ajout manuel dans Session.'),
                   Text('• Si l\'IA échoue, vérifiez la clé API et le modèle choisis.'),
+                  Text('• Vérifiez régulièrement les exports JSON auto dans le stockage de l\'app.'),
                 ],
               ),
             ),

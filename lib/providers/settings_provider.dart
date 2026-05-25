@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../models/app_settings.dart';
 import '../services/hive_service.dart';
+import '../services/secure_storage_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
   AppSettings _settings = AppSettings.initial();
+  final SecureStorageService _secureStorage = SecureStorageService();
+  String _openAiApiKey = '';
 
   AppSettings get settings => _settings;
+  String get openAiApiKey => _openAiApiKey;
 
   List<String> get basePlatforms => const [
     'France Travail',
@@ -33,6 +37,7 @@ class SettingsProvider extends ChangeNotifier {
     } else {
       _settings = box.get('main') ?? AppSettings.initial();
     }
+    _openAiApiKey = await _secureStorage.getOpenAiApiKey();
     notifyListeners();
   }
 
@@ -86,10 +91,21 @@ class SettingsProvider extends ChangeNotifier {
     required String apiKey,
     required String model,
   }) async {
-    _settings = _settings.copyWith(
-      openAiApiKey: apiKey.trim(),
-      openAiModel: model.trim(),
-    );
+    _openAiApiKey = apiKey.trim();
+    await _secureStorage.setOpenAiApiKey(_openAiApiKey);
+    _settings = _settings.copyWith(openAiModel: model.trim());
+    await HiveService.settingsBox.put('main', _settings);
+    notifyListeners();
+  }
+
+  Future<void> clearAiApiKey() async {
+    _openAiApiKey = '';
+    await _secureStorage.clearOpenAiApiKey();
+    notifyListeners();
+  }
+
+  Future<void> setLastAutoBackupAt(DateTime when) async {
+    _settings = _settings.copyWith(lastAutoBackupAt: when);
     await HiveService.settingsBox.put('main', _settings);
     notifyListeners();
   }

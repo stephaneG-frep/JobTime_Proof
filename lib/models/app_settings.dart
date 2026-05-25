@@ -7,8 +7,8 @@ class AppSettings {
     required this.otherPlatformWebUrl,
     required this.otherPlatformAppScheme,
     required this.darkModeEnabled,
-    required this.openAiApiKey,
     required this.openAiModel,
+    this.lastAutoBackupAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -18,8 +18,8 @@ class AppSettings {
   final String otherPlatformWebUrl;
   final String otherPlatformAppScheme;
   final bool darkModeEnabled;
-  final String openAiApiKey;
   final String openAiModel;
+  final DateTime? lastAutoBackupAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,8 +29,8 @@ class AppSettings {
     String? otherPlatformWebUrl,
     String? otherPlatformAppScheme,
     bool? darkModeEnabled,
-    String? openAiApiKey,
     String? openAiModel,
+    DateTime? lastAutoBackupAt,
   }) {
     return AppSettings(
       weeklyGoalHours: weeklyGoalHours ?? this.weeklyGoalHours,
@@ -39,8 +39,8 @@ class AppSettings {
       otherPlatformAppScheme:
           otherPlatformAppScheme ?? this.otherPlatformAppScheme,
       darkModeEnabled: darkModeEnabled ?? this.darkModeEnabled,
-      openAiApiKey: openAiApiKey ?? this.openAiApiKey,
       openAiModel: openAiModel ?? this.openAiModel,
+      lastAutoBackupAt: lastAutoBackupAt ?? this.lastAutoBackupAt,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );
@@ -54,8 +54,8 @@ class AppSettings {
       otherPlatformWebUrl: '',
       otherPlatformAppScheme: '',
       darkModeEnabled: false,
-      openAiApiKey: '',
       openAiModel: 'gpt-4.1-mini',
+      lastAutoBackupAt: null,
       createdAt: now,
       updatedAt: now,
     );
@@ -67,8 +67,8 @@ class AppSettings {
     'otherPlatformWebUrl': otherPlatformWebUrl,
     'otherPlatformAppScheme': otherPlatformAppScheme,
     'darkModeEnabled': darkModeEnabled,
-    'openAiApiKey': openAiApiKey,
     'openAiModel': openAiModel,
+    'lastAutoBackupAt': lastAutoBackupAt?.toIso8601String(),
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -81,8 +81,10 @@ class AppSettings {
     otherPlatformWebUrl: (json['otherPlatformWebUrl'] as String?) ?? '',
     otherPlatformAppScheme: (json['otherPlatformAppScheme'] as String?) ?? '',
     darkModeEnabled: (json['darkModeEnabled'] as bool?) ?? false,
-    openAiApiKey: (json['openAiApiKey'] as String?) ?? '',
     openAiModel: (json['openAiModel'] as String?) ?? 'gpt-4.1-mini',
+    lastAutoBackupAt: DateTime.tryParse(
+      (json['lastAutoBackupAt'] as String?) ?? '',
+    ),
     createdAt:
         DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
         DateTime.now(),
@@ -112,6 +114,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
     final f6 = fields[6];
     final f7 = fields[7];
     final f8 = fields[8];
+    final f9 = fields[9];
 
     // Backward compatibility:
     // - legacy format stored createdAt/updatedAt in fields 2/3
@@ -127,8 +130,8 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       otherPlatformWebUrl: f2 is String ? f2 : '',
       otherPlatformAppScheme: f3 is String ? f3 : '',
       darkModeEnabled: f6 is bool ? f6 : false,
-      openAiApiKey: f7 is String ? f7 : '',
-      openAiModel: f8 is String ? f8 : 'gpt-4.1-mini',
+      openAiModel: f8 is String ? f8 : (f7 is String ? f7 : 'gpt-4.1-mini'),
+      lastAutoBackupAt: f9 is DateTime ? f9 : null,
       createdAt: modernCreatedAt ?? legacyCreatedAt ?? now,
       updatedAt: modernUpdatedAt ?? legacyUpdatedAt ?? now,
     );
@@ -137,7 +140,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.weeklyGoalHours)
       ..writeByte(1)
@@ -152,9 +155,9 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..write(obj.updatedAt)
       ..writeByte(6)
       ..write(obj.darkModeEnabled)
-      ..writeByte(7)
-      ..write(obj.openAiApiKey)
       ..writeByte(8)
-      ..write(obj.openAiModel);
+      ..write(obj.openAiModel)
+      ..writeByte(9)
+      ..write(obj.lastAutoBackupAt);
   }
 }

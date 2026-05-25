@@ -31,7 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!_otherTargetsLoaded) {
       _otherWebCtrl.text = settingsProvider.settings.otherPlatformWebUrl;
       _otherAppCtrl.text = settingsProvider.settings.otherPlatformAppScheme;
-      _apiKeyCtrl.text = settingsProvider.settings.openAiApiKey;
+      _apiKeyCtrl.text = settingsProvider.openAiApiKey;
       _otherTargetsLoaded = true;
     }
 
@@ -60,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _apiKeyCtrl,
+                  obscureText: true,
                   decoration: const InputDecoration(
                     labelText: 'Clé API OpenAI',
                     hintText: 'sk-...',
@@ -132,6 +133,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await settingsProvider.clearAiApiKey();
+                    _apiKeyCtrl.clear();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Clé API supprimée.')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.key_off),
+                  label: const Text('Effacer la clé API'),
                 ),
                 const SizedBox(height: 8),
                 FilledButton.icon(

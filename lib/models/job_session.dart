@@ -72,9 +72,12 @@ class JobSession {
     id: json['id'] as String,
     platform: json['platform'] as String,
     actionType: json['actionType'] as String,
-    startTime: DateTime.parse(json['startTime'] as String),
-    endTime: DateTime.parse(json['endTime'] as String),
-    durationSeconds: json['durationSeconds'] as int,
+    startTime:
+        DateTime.tryParse((json['startTime'] as String?) ?? '') ??
+        DateTime.now(),
+    endTime:
+        DateTime.tryParse((json['endTime'] as String?) ?? '') ?? DateTime.now(),
+    durationSeconds: (json['durationSeconds'] as int?) ?? 0,
     notes: json['notes'] as String? ?? '',
     proofs: (json['proofs'] as List<dynamic>? ?? [])
         .map((e) => JobProof.fromJson(Map<String, dynamic>.from(e as Map)))
@@ -82,8 +85,12 @@ class JobSession {
     didApply:
         (json['didApply'] as bool?) ??
         (json['actionType'] as String).toLowerCase().contains('candidature'),
-    createdAt: DateTime.parse(json['createdAt'] as String),
-    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    createdAt:
+        DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
+        DateTime.now(),
+    updatedAt:
+        DateTime.tryParse((json['updatedAt'] as String?) ?? '') ??
+        DateTime.now(),
   );
 }
 
@@ -97,21 +104,23 @@ class JobSessionAdapter extends TypeAdapter<JobSession> {
       for (int i = 0; i < reader.readByte(); i++)
         reader.readByte(): reader.read(),
     };
+    final now = DateTime.now();
+    final actionType = (fields[2] as String?) ?? '';
+    final rawProofs = fields[7] as List?;
 
     return JobSession(
-      id: fields[0] as String,
-      platform: fields[1] as String,
-      actionType: fields[2] as String,
-      startTime: fields[3] as DateTime,
-      endTime: fields[4] as DateTime,
-      durationSeconds: fields[5] as int,
-      notes: fields[6] as String,
-      proofs: (fields[7] as List).cast<JobProof>(),
+      id: (fields[0] as String?) ?? now.microsecondsSinceEpoch.toString(),
+      platform: (fields[1] as String?) ?? 'Autre',
+      actionType: actionType,
+      startTime: (fields[3] as DateTime?) ?? now,
+      endTime: (fields[4] as DateTime?) ?? now,
+      durationSeconds: (fields[5] as int?) ?? 0,
+      notes: (fields[6] as String?) ?? '',
+      proofs: (rawProofs ?? const <dynamic>[]).cast<JobProof>(),
       didApply:
-          (fields[10] as bool?) ??
-          (fields[2] as String).toLowerCase().contains('candidature'),
-      createdAt: fields[8] as DateTime,
-      updatedAt: fields[9] as DateTime,
+          (fields[10] as bool?) ?? actionType.toLowerCase().contains('candidature'),
+      createdAt: (fields[8] as DateTime?) ?? now,
+      updatedAt: (fields[9] as DateTime?) ?? now,
     );
   }
 

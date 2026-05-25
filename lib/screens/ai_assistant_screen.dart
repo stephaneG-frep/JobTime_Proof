@@ -20,7 +20,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>().settings;
+    final settingsProvider = context.watch<SettingsProvider>();
+    final settings = settingsProvider.settings;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Assistant IA')),
@@ -42,17 +43,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
-                  onPressed: _loading
-                      ? null
-                      : () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          if (settings.openAiApiKey.trim().isEmpty) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Ajoute d\'abord la clé API dans Paramètres IA.',
-                                ),
-                              ),
+            onPressed: _loading
+                ? null
+                : () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    if (settingsProvider.openAiApiKey.trim().isEmpty) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Ajoute d\'abord la clé API dans Paramètres IA.',
+                          ),
+                        ),
                       );
                       return;
                     }
@@ -62,19 +63,19 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                     try {
                       final text = await _aiService
                           .generateSessionAssistantText(
-                            apiKey: settings.openAiApiKey,
+                            apiKey: settingsProvider.openAiApiKey,
                             model: settings.openAiModel,
                             input: _inputCtrl.text.trim(),
                           );
                       if (mounted) {
                         setState(() => _result = text);
                       }
-                          } catch (e) {
-                            if (mounted) {
-                              messenger.showSnackBar(
-                                SnackBar(content: Text('Erreur IA: $e')),
-                              );
-                            }
+                    } catch (e) {
+                      if (mounted) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('Erreur IA: $e')),
+                        );
+                      }
                     } finally {
                       if (mounted) setState(() => _loading = false);
                     }

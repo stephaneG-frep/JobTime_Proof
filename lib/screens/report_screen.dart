@@ -32,6 +32,11 @@ class _ReportScreenState extends State<ReportScreen> {
     final sessions = (from != null && to != null)
         ? provider.sessionsForPeriod(from, to)
         : <JobSession>[];
+    final totalsByPlatform = <String, int>{};
+    for (final s in sessions) {
+      totalsByPlatform[s.platform] =
+          (totalsByPlatform[s.platform] ?? 0) + s.durationSeconds;
+    }
     final totalSeconds = sessions.fold<int>(
       0,
       (sum, s) => sum + s.durationSeconds,
@@ -92,6 +97,19 @@ class _ReportScreenState extends State<ReportScreen> {
                       ),
                     ],
                   ),
+                  if (totalsByPlatform.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Totaux par plateforme',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    ...totalsByPlatform.entries.map(
+                      (entry) => Text(
+                        '• ${entry.key}: ${_formatDuration(entry.value)}',
+                      ),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 12),
                 FilledButton.icon(
@@ -117,6 +135,29 @@ class _ReportScreenState extends State<ReportScreen> {
                         },
                   icon: const Icon(Icons.picture_as_pdf),
                   label: const Text('Générer le rapport PDF'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _range == null || sessions.isEmpty
+                      ? null
+                      : () async {
+                          await _pdfService.exportPresentationReport(
+                            from: _range!.start,
+                            to: _range!.end,
+                            sessions: sessions,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Rapport de présentation généré.',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.slideshow_outlined),
+                  label: const Text('Rapport prêt à présenter'),
                 ),
                 if (_range != null && sessions.isEmpty)
                   const Padding(

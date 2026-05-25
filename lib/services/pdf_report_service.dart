@@ -25,6 +25,13 @@ class PdfReportService {
     final totalHours = (totalSeconds / 3600).toStringAsFixed(2);
     final candidatures = sessions.where((s) => s.didApply).length;
     final platforms = sessions.map((e) => e.platform).toSet().toList()..sort();
+    final sessionsByStart = [...sessions]
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final totalsByPlatform = <String, int>{};
+    for (final s in sessions) {
+      totalsByPlatform[s.platform] =
+          (totalsByPlatform[s.platform] ?? 0) + s.durationSeconds;
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -53,6 +60,65 @@ class PdfReportService {
                 pw.Text('Candidatures envoyées: $candidatures'),
                 pw.Text('Plateformes utilisées: ${platforms.join(', ')}'),
               ],
+            ),
+          ),
+          pw.SizedBox(height: 14),
+          pw.Text(
+            'Total par plateforme',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Table(
+            border: pw.TableBorder.all(width: 0.5),
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      'Plateforme',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      'Temps',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              ...totalsByPlatform.entries.map(
+                (entry) => pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(entry.key),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(_formatDuration(entry.value)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 14),
+          pw.Text(
+            'Chronologie des actions',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 6),
+          ...sessionsByStart.map(
+            (s) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 4),
+              child: pw.Text(
+                '${dateFormat.format(s.startTime)} - ${s.platform} - ${s.actionType} (${_formatDuration(s.durationSeconds)})',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
             ),
           ),
           pw.SizedBox(height: 14),
@@ -145,6 +211,87 @@ class PdfReportService {
               ),
             ),
           ),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+  }
+
+  Future<void> exportPresentationReport({
+    required DateTime from,
+    required DateTime to,
+    required List<JobSession> sessions,
+  }) async {
+    final pdf = pw.Document();
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'fr_FR');
+    final shortDateFormat = DateFormat('dd/MM/yyyy', 'fr_FR');
+    final totalSeconds = sessions.fold<int>(
+      0,
+      (sum, s) => sum + s.durationSeconds,
+    );
+    final applicationsCount = sessions.where((s) => s.didApply).length;
+    final byPlatform = <String, int>{};
+    for (final s in sessions) {
+      byPlatform[s.platform] =
+          (byPlatform[s.platform] ?? 0) + s.durationSeconds;
+    }
+    final topSessions = [...sessions]
+      ..sort((a, b) => b.durationSeconds.compareTo(a.durationSeconds));
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (_) => [
+          pw.Header(
+            level: 0,
+            child: pw.Text(
+              'JobTime Proof - Rapport de présentation',
+              style: pw.TextStyle(fontSize: 22),
+            ),
+          ),
+          pw.Text(
+            'Période: ${shortDateFormat.format(from)} au ${shortDateFormat.format(to)}',
+          ),
+          pw.Text('Généré le: ${dateFormat.format(DateTime.now())}'),
+          pw.SizedBox(height: 12),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(border: pw.Border.all()),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Temps total: ${_formatDuration(totalSeconds)}'),
+                pw.Text('Sessions: ${sessions.length}'),
+                pw.Text('Candidatures envoyées: $applicationsCount'),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text(
+            'Synthèse par plateforme',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 6),
+          ...byPlatform.entries.map(
+            (e) => pw.Text('• ${e.key}: ${_formatDuration(e.value)}'),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text(
+            'Sessions principales',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 6),
+          ...topSessions
+              .take(10)
+              .map(
+                (s) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Text(
+                    '• ${dateFormat.format(s.startTime)} - ${s.platform} - ${s.actionType} (${_formatDuration(s.durationSeconds)})',
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                ),
+              ),
         ],
       ),
     );
@@ -296,5 +443,11 @@ class PdfReportService {
           ),
         ];
     }
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    return '${hours}h ${minutes.toString().padLeft(2, '0')}';
   }
 }

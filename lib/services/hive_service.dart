@@ -7,6 +7,7 @@ import '../models/job_session.dart';
 class HiveService {
   static const sessionsBoxName = 'job_sessions_box';
   static const settingsBoxName = 'app_settings_box';
+  static const runtimeBoxName = 'runtime_state_box';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -19,6 +20,7 @@ class HiveService {
 
     await _openBoxSafe<JobSession>(sessionsBoxName);
     await _openBoxSafe<AppSettings>(settingsBoxName);
+    await _openBoxSafe<dynamic>(runtimeBoxName);
   }
 
   // Prevent app startup freeze if local Hive data becomes incompatible.
@@ -35,4 +37,5 @@ class HiveService {
       Hive.box<JobSession>(sessionsBoxName);
   static Box<AppSettings> get settingsBox =>
       Hive.box<AppSettings>(settingsBoxName);
+  static Box<dynamic> get runtimeBox => Hive.box<dynamic>(runtimeBoxName);
 }

@@ -11,6 +11,7 @@ import 'screens/report_screen.dart';
 import 'screens/session_timer_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/help_screen.dart';
+import 'services/auto_backup_service.dart';
 import 'services/hive_service.dart';
 
 Future<void> main() async {
@@ -46,6 +47,7 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
   );
   int _index = 0;
   bool _ready = false;
+  final _autoBackupService = AutoBackupService();
 
   final _pages = const [
     DashboardScreen(),
@@ -70,6 +72,11 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
 
     await settings.load();
     await sessions.load();
+    await _autoBackupService.runDailyBackupIfNeeded(
+      sessions: sessions.sessions,
+      settings: settings.settings,
+      onBackupDone: settings.setLastAutoBackupAt,
+    );
     await _pullSharedUrlFromNative();
     if (mounted) setState(() => _ready = true);
   }
