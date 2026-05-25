@@ -36,9 +36,7 @@ class _ReportScreenState extends State<ReportScreen> {
       0,
       (sum, s) => sum + s.durationSeconds,
     );
-    final applicationsCount = sessions
-        .where((s) => s.actionType.toLowerCase().contains('candidature'))
-        .length;
+    final applicationsCount = sessions.where((s) => s.didApply).length;
 
     return ListView(
       padding: const EdgeInsets.all(16),

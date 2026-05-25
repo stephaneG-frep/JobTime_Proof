@@ -7,6 +7,8 @@ class AppSettings {
     required this.otherPlatformWebUrl,
     required this.otherPlatformAppScheme,
     required this.darkModeEnabled,
+    required this.openAiApiKey,
+    required this.openAiModel,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -16,6 +18,8 @@ class AppSettings {
   final String otherPlatformWebUrl;
   final String otherPlatformAppScheme;
   final bool darkModeEnabled;
+  final String openAiApiKey;
+  final String openAiModel;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +29,8 @@ class AppSettings {
     String? otherPlatformWebUrl,
     String? otherPlatformAppScheme,
     bool? darkModeEnabled,
+    String? openAiApiKey,
+    String? openAiModel,
   }) {
     return AppSettings(
       weeklyGoalHours: weeklyGoalHours ?? this.weeklyGoalHours,
@@ -33,6 +39,8 @@ class AppSettings {
       otherPlatformAppScheme:
           otherPlatformAppScheme ?? this.otherPlatformAppScheme,
       darkModeEnabled: darkModeEnabled ?? this.darkModeEnabled,
+      openAiApiKey: openAiApiKey ?? this.openAiApiKey,
+      openAiModel: openAiModel ?? this.openAiModel,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );
@@ -46,6 +54,8 @@ class AppSettings {
       otherPlatformWebUrl: '',
       otherPlatformAppScheme: '',
       darkModeEnabled: false,
+      openAiApiKey: '',
+      openAiModel: 'gpt-4.1-mini',
       createdAt: now,
       updatedAt: now,
     );
@@ -57,6 +67,8 @@ class AppSettings {
     'otherPlatformWebUrl': otherPlatformWebUrl,
     'otherPlatformAppScheme': otherPlatformAppScheme,
     'darkModeEnabled': darkModeEnabled,
+    'openAiApiKey': openAiApiKey,
+    'openAiModel': openAiModel,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -69,6 +81,8 @@ class AppSettings {
     otherPlatformWebUrl: (json['otherPlatformWebUrl'] as String?) ?? '',
     otherPlatformAppScheme: (json['otherPlatformAppScheme'] as String?) ?? '',
     darkModeEnabled: (json['darkModeEnabled'] as bool?) ?? false,
+    openAiApiKey: (json['openAiApiKey'] as String?) ?? '',
+    openAiModel: (json['openAiModel'] as String?) ?? 'gpt-4.1-mini',
     createdAt:
         DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
         DateTime.now(),
@@ -96,6 +110,8 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
     final f4 = fields[4];
     final f5 = fields[5];
     final f6 = fields[6];
+    final f7 = fields[7];
+    final f8 = fields[8];
 
     // Backward compatibility:
     // - legacy format stored createdAt/updatedAt in fields 2/3
@@ -111,6 +127,8 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       otherPlatformWebUrl: f2 is String ? f2 : '',
       otherPlatformAppScheme: f3 is String ? f3 : '',
       darkModeEnabled: f6 is bool ? f6 : false,
+      openAiApiKey: f7 is String ? f7 : '',
+      openAiModel: f8 is String ? f8 : 'gpt-4.1-mini',
       createdAt: modernCreatedAt ?? legacyCreatedAt ?? now,
       updatedAt: modernUpdatedAt ?? legacyUpdatedAt ?? now,
     );
@@ -119,7 +137,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.weeklyGoalHours)
       ..writeByte(1)
@@ -133,6 +151,10 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(5)
       ..write(obj.updatedAt)
       ..writeByte(6)
-      ..write(obj.darkModeEnabled);
+      ..write(obj.darkModeEnabled)
+      ..writeByte(7)
+      ..write(obj.openAiApiKey)
+      ..writeByte(8)
+      ..write(obj.openAiModel);
   }
 }

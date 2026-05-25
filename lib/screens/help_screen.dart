@@ -25,7 +25,7 @@ class HelpScreen extends StatelessWidget {
             bullets: const [
               'Allez dans l\'onglet Session.',
               'Choisissez une plateforme et un type d\'action.',
-              'Utilisez Ouvrir la plateforme pour lancer app/site puis démarrer automatiquement le chrono.',
+              'Utilisez le widget Démarrage Rapide pour ouvrir la plateforme et démarrer automatiquement le chrono.',
               'Vous pouvez aussi cliquer Démarrer manuellement.',
             ],
           ),
@@ -43,7 +43,8 @@ class HelpScreen extends StatelessWidget {
             icon: Icons.verified_outlined,
             bullets: const [
               'Depuis Historique, ouvrez une session.',
-              'Ajoutez une preuve: image, PDF, URL ou note.',
+              'Ajoutez une preuve: image (caméra/galerie), PDF, URL ou note.',
+              'Touchez une preuve pour l\'ouvrir: image en aperçu, PDF via app externe, URL dans navigateur.',
               'Chaque preuve est horodatée et conservée en local.',
             ],
           ),
@@ -53,6 +54,7 @@ class HelpScreen extends StatelessWidget {
             bullets: const [
               'Filtrez par plateforme, type d\'action et date.',
               'Utilisez la recherche mot-clé pour retrouver rapidement une session.',
+              'Dans le détail, utilisez J\'ai postulé (Oui/Non) pour qualifier la session.',
               'Vous pouvez supprimer une session depuis son détail.',
             ],
           ),
@@ -62,7 +64,8 @@ class HelpScreen extends StatelessWidget {
             bullets: const [
               'Ouvrez l\'onglet Rapport.',
               'Sélectionnez une période.',
-              'Générez le PDF avec temps total, sessions et preuves.',
+              'Vérifiez les stats (temps, sessions, candidatures) puis générez le PDF.',
+              'Le PDF inclut toutes les preuves: images, PDF, liens (avec QR), notes.',
             ],
           ),
           _HelpSection(
@@ -70,9 +73,31 @@ class HelpScreen extends StatelessWidget {
             icon: Icons.settings_outlined,
             bullets: const [
               'Définissez votre objectif hebdomadaire en heures.',
+              'Activez le thème sombre si besoin.',
               'Ajoutez des plateformes personnalisées.',
               'Configurez la plateforme Autre (schéma app + URL web).',
+              'Configurez l\'IA: clé API OpenAI + modèle (gpt-4.1-mini, gpt-4.1, gpt-4o-mini).',
               'Exportez/Importez vos données JSON.',
+            ],
+          ),
+          _HelpSection(
+            title: '7. Assistant IA',
+            icon: Icons.auto_awesome,
+            bullets: const [
+              'Ouvrez Paramètres > Ouvrir Assistant IA.',
+              'Collez une annonce, des notes ou un texte libre.',
+              'L\'IA génère un résumé pro et une suggestion postulé oui/non.',
+              'Utilisez Copier pour réutiliser le texte dans vos notes ou preuves.',
+            ],
+          ),
+          _HelpSection(
+            title: '8. Partage de lien',
+            icon: Icons.share_outlined,
+            bullets: const [
+              'Depuis une annonce, utilisez Partager vers JobTime Proof.',
+              'Le lien apparaît dans Session (Lien partagé reçu).',
+              'Vous pouvez aussi coller manuellement un lien dans Session.',
+              'Ajoutez le lien à la dernière session en un clic.',
             ],
           ),
           Card(
@@ -91,6 +116,8 @@ class HelpScreen extends StatelessWidget {
                   ),
                   Text('• Sinon le fallback web s\'ouvre automatiquement.'),
                   Text('• Si le chrono ne tourne pas, relancez une session.'),
+                  Text('• Si un lien partagé n\'apparaît pas, utilisez l\'ajout manuel dans Session.'),
+                  Text('• Si l\'IA échoue, vérifiez la clé API et le modèle choisis.'),
                 ],
               ),
             ),

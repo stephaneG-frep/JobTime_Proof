@@ -122,6 +122,7 @@ class SessionProvider extends ChangeNotifier {
     _timer?.cancel();
 
     final now = DateTime.now();
+    final didApply = _selectedActionType.toLowerCase().contains('candidature');
     final session = JobSession(
       id: now.microsecondsSinceEpoch.toString(),
       platform: _selectedPlatform,
@@ -131,6 +132,7 @@ class SessionProvider extends ChangeNotifier {
       durationSeconds: elapsedSeconds,
       notes: _draftNotes.trim(),
       proofs: const [],
+      didApply: didApply,
       createdAt: now,
       updatedAt: now,
     );

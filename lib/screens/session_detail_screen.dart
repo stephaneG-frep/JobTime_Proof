@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/job_proof.dart';
 import '../models/job_session.dart';
@@ -107,6 +110,35 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           Text(
             'Notes: ${activeSession.notes.isEmpty ? 'Aucune' : activeSession.notes}',
           ),
+          const SizedBox(height: 10),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'J\'ai postulé',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment<bool>(value: true, label: Text('Oui')),
+                      ButtonSegment<bool>(value: false, label: Text('Non')),
+                    ],
+                    selected: {activeSession.didApply},
+                    onSelectionChanged: (selected) async {
+                      final value = selected.first;
+                      await provider.updateSession(
+                        activeSession.copyWith(didApply: value),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -129,8 +161,122 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 onShowQr: p.url != null && p.url!.trim().isNotEmpty
                     ? () => _showQrDialog(context, p.title, p.url!)
                     : null,
+                onTap: () => _openProof(context, p),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openProof(BuildContext context, JobProof proof) async {
+    switch (proof.type) {
+      case JobProofType.image:
+        if (proof.filePath == null || proof.filePath!.trim().isEmpty) {
+          _showInfo(context, 'Aucune image associée à cette preuve.');
+          return;
+        }
+        await _showImagePreview(context, proof.title, proof.filePath!);
+        break;
+      case JobProofType.pdf:
+        if (proof.filePath == null || proof.filePath!.trim().isEmpty) {
+          _showInfo(context, 'Aucun PDF associé à cette preuve.');
+          return;
+        }
+        final opened = await launchUrl(
+          Uri.file(proof.filePath!),
+          mode: LaunchMode.externalApplication,
+        );
+        if (!opened && context.mounted) {
+          _showInfo(context, 'Impossible d’ouvrir le PDF sur cet appareil.');
+        }
+        break;
+      case JobProofType.url:
+        if (proof.url == null || proof.url!.trim().isEmpty) {
+          _showInfo(context, 'Aucune URL associée à cette preuve.');
+          return;
+        }
+        final uri = Uri.tryParse(proof.url!.trim());
+        if (uri == null) {
+          _showInfo(context, 'URL invalide.');
+          return;
+        }
+        final opened = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!opened && context.mounted) {
+          _showInfo(context, 'Impossible d’ouvrir ce lien.');
+        }
+        break;
+      case JobProofType.note:
+        _showInfo(
+          context,
+          proof.description?.trim().isNotEmpty == true
+              ? proof.description!
+              : 'Cette preuve ne contient pas de texte.',
+        );
+        break;
+    }
+  }
+
+  Future<void> _showImagePreview(
+    BuildContext context,
+    String title,
+    String filePath,
+  ) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: InteractiveViewer(
+                child: Image.file(
+                  File(filePath),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Impossible de charger cette image.'),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showInfo(BuildContext context, String message) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
@@ -226,7 +372,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               String? url;
 
               if (type == JobProofType.image) {
-                path = await _fileService.pickImage();
+                path = await _pickImageSource(context);
               }
               if (type == JobProofType.pdf) path = await _fileService.pickPdf();
               if (type == JobProofType.url) url = urlCtrl.text.trim();
@@ -277,5 +423,36 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         ],
       ),
     );
+  }
+
+  Future<String?> _pickImageSource(BuildContext context) async {
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Prendre une photo'),
+              onTap: () => Navigator.pop(context, 'camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choisir depuis la galerie'),
+              onTap: () => Navigator.pop(context, 'gallery'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == 'camera') {
+      return _fileService.pickImageFromCamera();
+    }
+    if (source == 'gallery') {
+      return _fileService.pickImageFromGallery();
+    }
+    return null;
   }
 }

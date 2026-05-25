@@ -4,10 +4,11 @@ import 'package:intl/intl.dart';
 import '../models/job_proof.dart';
 
 class ProofCard extends StatelessWidget {
-  const ProofCard({super.key, required this.proof, this.onShowQr});
+  const ProofCard({super.key, required this.proof, this.onShowQr, this.onTap});
 
   final JobProof proof;
   final VoidCallback? onShowQr;
+  final VoidCallback? onTap;
 
   IconData _icon(JobProofType type) {
     switch (type) {
@@ -27,6 +28,7 @@ class ProofCard extends StatelessWidget {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
+        onTap: onTap,
         leading: Icon(_icon(proof.type)),
         title: Text(proof.title),
         subtitle: Text(

@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/ai_service.dart';
 import '../services/file_service.dart';
+import 'ai_assistant_screen.dart';
 import 'help_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,7 +19,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _platformCtrl = TextEditingController();
   final _otherWebCtrl = TextEditingController();
   final _otherAppCtrl = TextEditingController();
+  final _apiKeyCtrl = TextEditingController();
   final _fileService = FileService();
+  final _aiService = AiService();
   bool _otherTargetsLoaded = false;
 
   @override
@@ -27,6 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!_otherTargetsLoaded) {
       _otherWebCtrl.text = settingsProvider.settings.otherPlatformWebUrl;
       _otherAppCtrl.text = settingsProvider.settings.otherPlatformAppScheme;
+      _apiKeyCtrl.text = settingsProvider.settings.openAiApiKey;
       _otherTargetsLoaded = true;
     }
 
@@ -51,10 +56,112 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text('Paramètres IA'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _apiKeyCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Clé API OpenAI',
+                    hintText: 'sk-...',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: settingsProvider.settings.openAiModel,
+                  decoration: const InputDecoration(
+                    labelText: 'Modèle IA',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: settingsProvider.aiModels
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                      .toList(),
+                  onChanged: (model) async {
+                    if (model == null) return;
+                    await settingsProvider.setAiConfig(
+                      apiKey: _apiKeyCtrl.text,
+                      model: model,
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.tonal(
+                        onPressed: () async {
+                          await settingsProvider.setAiConfig(
+                            apiKey: _apiKeyCtrl.text,
+                            model: settingsProvider.settings.openAiModel,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Configuration IA sauvegardée.'),
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text('Enregistrer IA'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          try {
+                            await _aiService.testConnection(
+                              apiKey: _apiKeyCtrl.text.trim(),
+                              model: settingsProvider.settings.openAiModel,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Connexion IA OK.'),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Erreur IA: $e')),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Tester'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AiAssistantScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Ouvrir Assistant IA'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Thème sombre'),
-                  subtitle: const Text('Active le mode sombre dans toute l’application'),
+                  subtitle: const Text(
+                    'Active le mode sombre dans toute l’application',
+                  ),
                   value: settingsProvider.settings.darkModeEnabled,
                   onChanged: (value) => settingsProvider.setDarkMode(value),
                 ),
@@ -251,6 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _platformCtrl.dispose();
     _otherWebCtrl.dispose();
     _otherAppCtrl.dispose();
+    _apiKeyCtrl.dispose();
     super.dispose();
   }
 }

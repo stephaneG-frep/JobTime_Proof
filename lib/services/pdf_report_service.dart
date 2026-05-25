@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../models/job_proof.dart';
 import '../models/job_session.dart';
 
 class PdfReportService {
@@ -20,9 +23,7 @@ class PdfReportService {
       (sum, s) => sum + s.durationSeconds,
     );
     final totalHours = (totalSeconds / 3600).toStringAsFixed(2);
-    final candidatures = sessions
-        .where((s) => s.actionType.toLowerCase().contains('candidature'))
-        .length;
+    final candidatures = sessions.where((s) => s.didApply).length;
     final platforms = sessions.map((e) => e.platform).toSet().toList()..sort();
 
     pdf.addPage(
@@ -139,47 +140,7 @@ class PdfReportService {
                 children: [
                   if (s.notes.trim().isNotEmpty)
                     pw.Text('Notes: ${s.notes.trim()}'),
-                  if (s.proofs.isNotEmpty) ...[
-                    pw.Text(
-                      'Preuves: ${s.proofs.map((p) => p.title).join(' | ')}',
-                    ),
-                    pw.SizedBox(height: 6),
-                    ...s.proofs
-                        .where(
-                          (p) =>
-                              p.url != null &&
-                              p.url!.trim().isNotEmpty &&
-                              p.type.name == 'url',
-                        )
-                        .map(
-                          (p) => pw.Padding(
-                            padding: const pw.EdgeInsets.only(bottom: 6),
-                            child: pw.Row(
-                              crossAxisAlignment: pw.CrossAxisAlignment.start,
-                              children: [
-                                pw.Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: pw.BoxDecoration(
-                                    border: pw.Border.all(width: 0.5),
-                                  ),
-                                  child: pw.BarcodeWidget(
-                                    barcode: pw.Barcode.qrCode(),
-                                    data: p.url!.trim(),
-                                  ),
-                                ),
-                                pw.SizedBox(width: 8),
-                                pw.Expanded(
-                                  child: pw.Text(
-                                    'QR ${p.title}: ${p.url!.trim()}',
-                                    style: const pw.TextStyle(fontSize: 10),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                  ],
+                  if (s.proofs.isNotEmpty) ..._buildProofWidgets(s.proofs),
                 ],
               ),
             ),
@@ -189,5 +150,151 @@ class PdfReportService {
     );
 
     await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+  }
+
+  List<pw.Widget> _buildProofWidgets(List<JobProof> proofs) {
+    final widgets = <pw.Widget>[
+      pw.Text(
+        'Preuves détaillées',
+        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      ),
+      pw.SizedBox(height: 6),
+    ];
+
+    for (final proof in proofs) {
+      widgets.add(
+        pw.Container(
+          margin: const pw.EdgeInsets.only(bottom: 6),
+          padding: const pw.EdgeInsets.all(6),
+          decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.3)),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                '${_proofTypeLabel(proof.type)} - ${proof.title}',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+              if (proof.description != null &&
+                  proof.description!.trim().isNotEmpty)
+                pw.Text(
+                  'Description: ${proof.description!.trim()}',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+              ..._proofContentWidgets(proof),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  String _proofTypeLabel(JobProofType type) {
+    switch (type) {
+      case JobProofType.image:
+        return 'Image';
+      case JobProofType.pdf:
+        return 'PDF';
+      case JobProofType.url:
+        return 'Lien';
+      case JobProofType.note:
+        return 'Note';
+    }
+  }
+
+  List<pw.Widget> _proofContentWidgets(JobProof proof) {
+    switch (proof.type) {
+      case JobProofType.image:
+        final path = proof.filePath?.trim();
+        if (path == null || path.isEmpty) {
+          return [
+            pw.Text(
+              'Image: non disponible',
+              style: const pw.TextStyle(fontSize: 9),
+            ),
+          ];
+        }
+        final file = File(path);
+        if (!file.existsSync()) {
+          return [
+            pw.Text(
+              'Image introuvable: $path',
+              style: const pw.TextStyle(fontSize: 9),
+            ),
+          ];
+        }
+        final bytes = file.readAsBytesSync();
+        final image = pw.MemoryImage(bytes);
+        return [
+          pw.SizedBox(height: 4),
+          pw.Container(
+            height: 120,
+            width: 120,
+            decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.3)),
+            child: pw.Image(image, fit: pw.BoxFit.cover),
+          ),
+        ];
+      case JobProofType.pdf:
+        final path = proof.filePath?.trim();
+        if (path == null || path.isEmpty) {
+          return [
+            pw.Text(
+              'PDF: non disponible',
+              style: const pw.TextStyle(fontSize: 9),
+            ),
+          ];
+        }
+        final filename = path.split('/').isNotEmpty
+            ? path.split('/').last
+            : path;
+        return [
+          pw.Text(
+            'Fichier PDF: $filename',
+            style: const pw.TextStyle(fontSize: 9),
+          ),
+        ];
+      case JobProofType.url:
+        final url = proof.url?.trim();
+        if (url == null || url.isEmpty) {
+          return [
+            pw.Text(
+              'Lien: non disponible',
+              style: const pw.TextStyle(fontSize: 9),
+            ),
+          ];
+        }
+        return [
+          pw.SizedBox(height: 4),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Container(
+                width: 52,
+                height: 52,
+                decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.5)),
+                child: pw.BarcodeWidget(
+                  barcode: pw.Barcode.qrCode(),
+                  data: url,
+                ),
+              ),
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                child: pw.Text(url, style: const pw.TextStyle(fontSize: 9)),
+              ),
+            ],
+          ),
+        ];
+      case JobProofType.note:
+        return [
+          pw.Text(
+            'Note: ${(proof.description?.trim().isNotEmpty == true) ? proof.description!.trim() : proof.title}',
+            style: const pw.TextStyle(fontSize: 9),
+          ),
+        ];
+    }
   }
 }

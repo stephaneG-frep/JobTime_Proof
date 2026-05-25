@@ -12,6 +12,7 @@ class JobSession {
     required this.durationSeconds,
     required this.notes,
     required this.proofs,
+    required this.didApply,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -24,6 +25,7 @@ class JobSession {
   final int durationSeconds;
   final String notes;
   final List<JobProof> proofs;
+  final bool didApply;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -35,6 +37,7 @@ class JobSession {
     int? durationSeconds,
     String? notes,
     List<JobProof>? proofs,
+    bool? didApply,
   }) {
     return JobSession(
       id: id,
@@ -45,6 +48,7 @@ class JobSession {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       notes: notes ?? this.notes,
       proofs: proofs ?? this.proofs,
+      didApply: didApply ?? this.didApply,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );
@@ -59,6 +63,7 @@ class JobSession {
     'durationSeconds': durationSeconds,
     'notes': notes,
     'proofs': proofs.map((e) => e.toJson()).toList(),
+    'didApply': didApply,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -74,6 +79,9 @@ class JobSession {
     proofs: (json['proofs'] as List<dynamic>? ?? [])
         .map((e) => JobProof.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList(),
+    didApply:
+        (json['didApply'] as bool?) ??
+        (json['actionType'] as String).toLowerCase().contains('candidature'),
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
   );
@@ -99,6 +107,9 @@ class JobSessionAdapter extends TypeAdapter<JobSession> {
       durationSeconds: fields[5] as int,
       notes: fields[6] as String,
       proofs: (fields[7] as List).cast<JobProof>(),
+      didApply:
+          (fields[10] as bool?) ??
+          (fields[2] as String).toLowerCase().contains('candidature'),
       createdAt: fields[8] as DateTime,
       updatedAt: fields[9] as DateTime,
     );
@@ -107,7 +118,7 @@ class JobSessionAdapter extends TypeAdapter<JobSession> {
   @override
   void write(BinaryWriter writer, JobSession obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -127,6 +138,8 @@ class JobSessionAdapter extends TypeAdapter<JobSession> {
       ..writeByte(8)
       ..write(obj.createdAt)
       ..writeByte(9)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(10)
+      ..write(obj.didApply);
   }
 }

@@ -13,12 +13,32 @@ import '../models/job_session.dart';
 class FileService {
   final ImagePicker _imagePicker = ImagePicker();
 
-  Future<String?> pickImage() async {
+  Future<String?> pickImageFromGallery() async {
     final picked = await _imagePicker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 85,
     );
-    return picked?.path;
+    if (picked == null) return null;
+    return _persistPickedFile(
+      originalPath: picked.path,
+      bytes: null,
+      fileName: picked.name,
+      extensionFallback: 'jpg',
+    );
+  }
+
+  Future<String?> pickImageFromCamera() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
+    if (picked == null) return null;
+    return _persistPickedFile(
+      originalPath: picked.path,
+      bytes: null,
+      fileName: picked.name,
+      extensionFallback: 'jpg',
+    );
   }
 
   Future<String?> pickPdf() async {

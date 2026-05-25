@@ -23,6 +23,8 @@ class SettingsProvider extends ChangeNotifier {
     return merged.toList()..sort();
   }
 
+  List<String> get aiModels => const ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini'];
+
   Future<void> load() async {
     final box = HiveService.settingsBox;
     if (box.isEmpty) {
@@ -76,6 +78,18 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setDarkMode(bool enabled) async {
     _settings = _settings.copyWith(darkModeEnabled: enabled);
+    await HiveService.settingsBox.put('main', _settings);
+    notifyListeners();
+  }
+
+  Future<void> setAiConfig({
+    required String apiKey,
+    required String model,
+  }) async {
+    _settings = _settings.copyWith(
+      openAiApiKey: apiKey.trim(),
+      openAiModel: model.trim(),
+    );
     await HiveService.settingsBox.put('main', _settings);
     notifyListeners();
   }
