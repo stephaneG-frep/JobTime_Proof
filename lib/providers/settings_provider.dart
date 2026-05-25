@@ -7,10 +7,12 @@ import '../services/secure_storage_service.dart';
 class SettingsProvider extends ChangeNotifier {
   AppSettings _settings = AppSettings.initial();
   final SecureStorageService _secureStorage = SecureStorageService();
-  String _openAiApiKey = '';
+  final Map<String, String> _apiKeysByProvider = {};
 
   AppSettings get settings => _settings;
-  String get openAiApiKey => _openAiApiKey;
+  String get currentAiApiKey => _apiKeysByProvider[_settings.aiProvider] ?? '';
+  String apiKeyForProvider(String provider) =>
+      _apiKeysByProvider[provider] ?? '';
 
   List<String> get basePlatforms => const [
     'France Travail',
@@ -27,7 +29,23 @@ class SettingsProvider extends ChangeNotifier {
     return merged.toList()..sort();
   }
 
-  List<String> get aiModels => const ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini'];
+  List<String> get aiProviders => const ['openai', 'gemini', 'mistral'];
+
+  List<String> aiModelsForProvider(String provider) {
+    switch (provider) {
+      case 'gemini':
+        return const ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
+      case 'mistral':
+        return const [
+          'mistral-small-latest',
+          'mistral-medium-latest',
+          'mistral-large-latest',
+        ];
+      case 'openai':
+      default:
+        return const ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o-mini'];
+    }
+  }
 
   Future<void> load() async {
     final box = HiveService.settingsBox;
@@ -37,7 +55,9 @@ class SettingsProvider extends ChangeNotifier {
     } else {
       _settings = box.get('main') ?? AppSettings.initial();
     }
-    _openAiApiKey = await _secureStorage.getOpenAiApiKey();
+    for (final provider in aiProviders) {
+      _apiKeysByProvider[provider] = await _secureStorage.getApiKey(provider);
+    }
     notifyListeners();
   }
 
@@ -88,19 +108,23 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setAiConfig({
+    required String provider,
     required String apiKey,
     required String model,
   }) async {
-    _openAiApiKey = apiKey.trim();
-    await _secureStorage.setOpenAiApiKey(_openAiApiKey);
-    _settings = _settings.copyWith(openAiModel: model.trim());
+    _apiKeysByProvider[provider] = apiKey.trim();
+    await _secureStorage.setApiKey(provider, apiKey.trim());
+    _settings = _settings.copyWith(
+      aiProvider: provider.trim(),
+      aiModel: model.trim(),
+    );
     await HiveService.settingsBox.put('main', _settings);
     notifyListeners();
   }
 
-  Future<void> clearAiApiKey() async {
-    _openAiApiKey = '';
-    await _secureStorage.clearOpenAiApiKey();
+  Future<void> clearAiApiKeyFor(String provider) async {
+    _apiKeysByProvider[provider] = '';
+    await _secureStorage.clearApiKey(provider);
     notifyListeners();
   }
 

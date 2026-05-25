@@ -47,7 +47,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                 ? null
                 : () async {
                     final messenger = ScaffoldMessenger.of(context);
-                    if (settingsProvider.openAiApiKey.trim().isEmpty) {
+                    if (settingsProvider.currentAiApiKey.trim().isEmpty) {
                       messenger.showSnackBar(
                         const SnackBar(
                           content: Text(
@@ -63,8 +63,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                     try {
                       final text = await _aiService
                           .generateSessionAssistantText(
-                            apiKey: settingsProvider.openAiApiKey,
-                            model: settings.openAiModel,
+                            provider: settings.aiProvider,
+                            apiKey: settingsProvider.currentAiApiKey,
+                            model: settings.aiModel,
                             input: _inputCtrl.text.trim(),
                           );
                       if (mounted) {

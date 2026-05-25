@@ -31,7 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!_otherTargetsLoaded) {
       _otherWebCtrl.text = settingsProvider.settings.otherPlatformWebUrl;
       _otherAppCtrl.text = settingsProvider.settings.otherPlatformAppScheme;
-      _apiKeyCtrl.text = settingsProvider.openAiApiKey;
+      _apiKeyCtrl.text = settingsProvider.currentAiApiKey;
       _otherTargetsLoaded = true;
     }
 
@@ -68,17 +68,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  initialValue: settingsProvider.settings.openAiModel,
+                  initialValue: settingsProvider.settings.aiProvider,
+                  decoration: const InputDecoration(
+                    labelText: 'Provider IA',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: settingsProvider.aiProviders
+                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                      .toList(),
+                  onChanged: (provider) async {
+                    if (provider == null) return;
+                    final models = settingsProvider.aiModelsForProvider(
+                      provider,
+                    );
+                    final selectedModel = models.first;
+                    final apiKey = settingsProvider.apiKeyForProvider(provider);
+                    _apiKeyCtrl.text = apiKey;
+                    await settingsProvider.setAiConfig(
+                      provider: provider,
+                      apiKey: apiKey,
+                      model: selectedModel,
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: settingsProvider.settings.aiModel,
                   decoration: const InputDecoration(
                     labelText: 'Modèle IA',
                     border: OutlineInputBorder(),
                   ),
-                  items: settingsProvider.aiModels
+                  items: settingsProvider
+                      .aiModelsForProvider(settingsProvider.settings.aiProvider)
                       .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                       .toList(),
                   onChanged: (model) async {
                     if (model == null) return;
                     await settingsProvider.setAiConfig(
+                      provider: settingsProvider.settings.aiProvider,
                       apiKey: _apiKeyCtrl.text,
                       model: model,
                     );
@@ -91,8 +118,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: FilledButton.tonal(
                         onPressed: () async {
                           await settingsProvider.setAiConfig(
+                            provider: settingsProvider.settings.aiProvider,
                             apiKey: _apiKeyCtrl.text,
-                            model: settingsProvider.settings.openAiModel,
+                            model: settingsProvider.settings.aiModel,
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -111,8 +139,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onPressed: () async {
                           try {
                             await _aiService.testConnection(
+                              provider: settingsProvider.settings.aiProvider,
                               apiKey: _apiKeyCtrl.text.trim(),
-                              model: settingsProvider.settings.openAiModel,
+                              model: settingsProvider.settings.aiModel,
                             );
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -137,7 +166,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    await settingsProvider.clearAiApiKey();
+                    await settingsProvider.clearAiApiKeyFor(
+                      settingsProvider.settings.aiProvider,
+                    );
                     _apiKeyCtrl.clear();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(

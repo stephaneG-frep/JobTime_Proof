@@ -7,7 +7,8 @@ class AppSettings {
     required this.otherPlatformWebUrl,
     required this.otherPlatformAppScheme,
     required this.darkModeEnabled,
-    required this.openAiModel,
+    required this.aiProvider,
+    required this.aiModel,
     this.lastAutoBackupAt,
     required this.createdAt,
     required this.updatedAt,
@@ -18,7 +19,8 @@ class AppSettings {
   final String otherPlatformWebUrl;
   final String otherPlatformAppScheme;
   final bool darkModeEnabled;
-  final String openAiModel;
+  final String aiProvider;
+  final String aiModel;
   final DateTime? lastAutoBackupAt;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -29,7 +31,8 @@ class AppSettings {
     String? otherPlatformWebUrl,
     String? otherPlatformAppScheme,
     bool? darkModeEnabled,
-    String? openAiModel,
+    String? aiProvider,
+    String? aiModel,
     DateTime? lastAutoBackupAt,
   }) {
     return AppSettings(
@@ -39,7 +42,8 @@ class AppSettings {
       otherPlatformAppScheme:
           otherPlatformAppScheme ?? this.otherPlatformAppScheme,
       darkModeEnabled: darkModeEnabled ?? this.darkModeEnabled,
-      openAiModel: openAiModel ?? this.openAiModel,
+      aiProvider: aiProvider ?? this.aiProvider,
+      aiModel: aiModel ?? this.aiModel,
       lastAutoBackupAt: lastAutoBackupAt ?? this.lastAutoBackupAt,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
@@ -54,7 +58,8 @@ class AppSettings {
       otherPlatformWebUrl: '',
       otherPlatformAppScheme: '',
       darkModeEnabled: false,
-      openAiModel: 'gpt-4.1-mini',
+      aiProvider: 'openai',
+      aiModel: 'gpt-4.1-mini',
       lastAutoBackupAt: null,
       createdAt: now,
       updatedAt: now,
@@ -67,7 +72,8 @@ class AppSettings {
     'otherPlatformWebUrl': otherPlatformWebUrl,
     'otherPlatformAppScheme': otherPlatformAppScheme,
     'darkModeEnabled': darkModeEnabled,
-    'openAiModel': openAiModel,
+    'aiProvider': aiProvider,
+    'aiModel': aiModel,
     'lastAutoBackupAt': lastAutoBackupAt?.toIso8601String(),
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
@@ -81,7 +87,11 @@ class AppSettings {
     otherPlatformWebUrl: (json['otherPlatformWebUrl'] as String?) ?? '',
     otherPlatformAppScheme: (json['otherPlatformAppScheme'] as String?) ?? '',
     darkModeEnabled: (json['darkModeEnabled'] as bool?) ?? false,
-    openAiModel: (json['openAiModel'] as String?) ?? 'gpt-4.1-mini',
+    aiProvider: (json['aiProvider'] as String?) ?? 'openai',
+    aiModel:
+        (json['aiModel'] as String?) ??
+        (json['openAiModel'] as String?) ??
+        'gpt-4.1-mini',
     lastAutoBackupAt: DateTime.tryParse(
       (json['lastAutoBackupAt'] as String?) ?? '',
     ),
@@ -130,7 +140,8 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       otherPlatformWebUrl: f2 is String ? f2 : '',
       otherPlatformAppScheme: f3 is String ? f3 : '',
       darkModeEnabled: f6 is bool ? f6 : false,
-      openAiModel: f8 is String ? f8 : (f7 is String ? f7 : 'gpt-4.1-mini'),
+      aiProvider: f7 is String ? f7 : 'openai',
+      aiModel: f8 is String ? f8 : 'gpt-4.1-mini',
       lastAutoBackupAt: f9 is DateTime ? f9 : null,
       createdAt: modernCreatedAt ?? legacyCreatedAt ?? now,
       updatedAt: modernUpdatedAt ?? legacyUpdatedAt ?? now,
@@ -155,8 +166,10 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..write(obj.updatedAt)
       ..writeByte(6)
       ..write(obj.darkModeEnabled)
+      ..writeByte(7)
+      ..write(obj.aiProvider)
       ..writeByte(8)
-      ..write(obj.openAiModel)
+      ..write(obj.aiModel)
       ..writeByte(9)
       ..write(obj.lastAutoBackupAt);
   }
