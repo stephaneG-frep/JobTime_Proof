@@ -98,8 +98,13 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          'Session de recherche',
+          'Session estimée',
           style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Déclarez le temps passé par tranches de 10 minutes, sans chronomètre.',
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),
         if (sessionProvider.pendingSharedUrl != null)

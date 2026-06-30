@@ -108,7 +108,7 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 14),
           pw.Text(
-            'Chronologie des actions',
+            'Chronologie des sessions',
             style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
