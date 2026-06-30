@@ -214,6 +214,50 @@ class SessionProvider extends ChangeNotifier {
     return session;
   }
 
+  Future<JobSession> saveEstimatedSession({required int minutes}) async {
+    final now = DateTime.now();
+    final safeMinutes = minutes < 1 ? 10 : minutes;
+    final start = now.subtract(Duration(minutes: safeMinutes));
+    final sessionId = now.microsecondsSinceEpoch.toString();
+    final didApply = _selectedActionType.toLowerCase().contains('candidature');
+    final finalizedProofs = _draftUrls
+        .map(
+          (url) => JobProof(
+            id: '${now.microsecondsSinceEpoch}_${url.hashCode}',
+            sessionId: sessionId,
+            title: 'Lien session',
+            type: JobProofType.url,
+            url: url,
+            createdAt: now,
+          ),
+        )
+        .toList();
+    final session = JobSession(
+      id: sessionId,
+      platform: _selectedPlatform,
+      actionType: _selectedActionType,
+      startTime: start,
+      endTime: now,
+      durationSeconds: safeMinutes * 60,
+      notes: _draftNotes.trim(),
+      proofs: finalizedProofs,
+      didApply: didApply,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await HiveService.sessionsBox.put(session.id, session);
+    _sessions.insert(0, session);
+
+    _draftNotes = '';
+    _draftUrls.clear();
+    _pendingSharedUrl = null;
+    await HiveService.runtimeBox.delete(_draftStateKey);
+
+    notifyListeners();
+    return session;
+  }
+
   Future<void> addProof(String sessionId, JobProof proof) async {
     final index = _sessions.indexWhere((s) => s.id == sessionId);
     if (index == -1) return;

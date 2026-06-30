@@ -17,6 +17,7 @@ class SessionTimerScreen extends StatefulWidget {
 class _SessionTimerScreenState extends State<SessionTimerScreen> {
   final _notesController = TextEditingController();
   final _manualUrlController = TextEditingController();
+  int _estimatedMinutes = 30;
   final Map<String, Uri> _platformWebUrls = {
     'France Travail': Uri.parse('https://www.francetravail.fr'),
     'Indeed': Uri.parse('https://fr.indeed.com'),
@@ -35,11 +36,12 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
     'Welcome to the Jungle': Uri.parse('welcometothejungle://'),
   };
 
-  String _formatTime(int seconds) {
-    final h = (seconds ~/ 3600).toString().padLeft(2, '0');
-    final m = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
-    final s = (seconds % 60).toString().padLeft(2, '0');
-    return '$h:$m:$s';
+  String _formatMinutes(int minutes) {
+    final hours = minutes ~/ 60;
+    final remaining = minutes % 60;
+    if (hours == 0) return '$minutes min';
+    if (remaining == 0) return '${hours}h';
+    return '${hours}h ${remaining.toString().padLeft(2, '0')}';
   }
 
   Future<bool> _openPlatform({
@@ -121,14 +123,16 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                       Expanded(
                         child: FilledButton.icon(
                           onPressed: () async {
-                            final sharedUrl =
-                                sessionProvider.consumePendingSharedUrl();
+                            final sharedUrl = sessionProvider
+                                .consumePendingSharedUrl();
                             if (sharedUrl == null || sharedUrl.isEmpty) return;
                             sessionProvider.addDraftUrl(sharedUrl);
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Lien ajouté à la session en cours.'),
+                                content: Text(
+                                  'Lien ajouté à la session en cours.',
+                                ),
                               ),
                             );
                           },
@@ -172,7 +176,8 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                   onPressed: () async {
                     final raw = _manualUrlController.text.trim();
                     final uri = Uri.tryParse(raw);
-                    final valid = uri != null &&
+                    final valid =
+                        uri != null &&
                         (uri.scheme == 'http' || uri.scheme == 'https') &&
                         uri.host.isNotEmpty;
                     if (!valid) {
@@ -266,9 +271,6 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                     platformWebUrl: platformWebUrl,
                     platformAppUrl: platformAppUrl,
                   );
-                  if (opened && !sessionProvider.isRunning) {
-                    sessionProvider.startSession();
-                  }
                   if (!opened && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -298,70 +300,79 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
+                const Text(
+                  'Temps estimé',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  _formatTime(sessionProvider.elapsedSeconds),
+                  _formatMinutes(_estimatedMinutes),
                   style: Theme.of(context).textTheme.displaySmall,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  sessionProvider.isPaused
-                      ? 'Session en pause'
-                      : (sessionProvider.isRunning
-                            ? 'Session en cours'
-                            : 'Prêt à démarrer'),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _estimatedMinutes <= 10
+                            ? null
+                            : () => setState(() => _estimatedMinutes -= 10),
+                        icon: const Icon(Icons.remove),
+                        label: const Text('-10 min'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () =>
+                            setState(() => _estimatedMinutes += 10),
+                        icon: const Icon(Icons.add),
+                        label: const Text('+10 min'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [10, 20, 30, 60, 90, 120]
+                      .map(
+                        (minutes) => ChoiceChip(
+                          label: Text(_formatMinutes(minutes)),
+                          selected: _estimatedMinutes == minutes,
+                          onSelected: (_) =>
+                              setState(() => _estimatedMinutes = minutes),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                onPressed:
-                    sessionProvider.isRunning && !sessionProvider.isPaused
-                    ? null
-                    : () {
-                        sessionProvider.startSession();
-                      },
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Démarrer'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed:
-                    sessionProvider.isRunning && !sessionProvider.isPaused
-                    ? () {
-                        sessionProvider.pauseSession();
-                      }
-                    : null,
-                icon: const Icon(Icons.pause),
-                label: const Text('Pause'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        FilledButton.tonalIcon(
-          onPressed: sessionProvider.isRunning
-              ? () async {
-                  sessionProvider.setDraftNotes(_notesController.text);
-                  final saved = await sessionProvider.endSession();
-                  _notesController.clear();
-                  if (saved != null && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Session sauvegardée automatiquement.'),
-                      ),
-                    );
-                  }
-                }
-              : null,
-          icon: const Icon(Icons.stop_circle_outlined),
-          label: const Text('Terminer'),
+        FilledButton.icon(
+          onPressed: () async {
+            sessionProvider.setDraftNotes(_notesController.text);
+            await sessionProvider.saveEstimatedSession(
+              minutes: _estimatedMinutes,
+            );
+            _notesController.clear();
+            _manualUrlController.clear();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Session sauvegardée avec ${_formatMinutes(_estimatedMinutes)}.',
+                  ),
+                ),
+              );
+            }
+          },
+          icon: const Icon(Icons.save_outlined),
+          label: const Text('Sauvegarder la session'),
         ),
       ],
     );

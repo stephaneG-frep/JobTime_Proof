@@ -34,7 +34,7 @@ class QuickStartCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Widget Démarrage Rapide',
+                      'Ouverture rapide',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -47,7 +47,7 @@ class QuickStartCard extends StatelessWidget {
             Text('Plateforme sélectionnée: $platform'),
             const SizedBox(height: 4),
             const Text(
-              'Ouvre la plateforme et démarre automatiquement le chrono.',
+              'Ouvre la plateforme choisie. Vous déclarez ensuite le temps passé par estimation.',
             ),
             const SizedBox(height: 10),
             FilledButton.icon(
@@ -58,7 +58,7 @@ class QuickStartCard extends StatelessWidget {
               icon: const Icon(Icons.open_in_new),
               label: Text(
                 enabled
-                    ? 'Lancer recherche (ouvrir + chrono)'
+                    ? 'Ouvrir la plateforme'
                     : 'Configurer une URL pour cette plateforme',
               ),
             ),

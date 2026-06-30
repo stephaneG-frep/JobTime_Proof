@@ -20,22 +20,22 @@ class HelpScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _HelpSection(
-            title: '1. Démarrer une session',
+            title: '1. Déclarer une session',
             icon: Icons.play_circle_outline,
             bullets: const [
               'Allez dans l\'onglet Session.',
               'Choisissez une plateforme et un type d\'action.',
-              'Utilisez le widget Démarrage Rapide pour ouvrir la plateforme et démarrer automatiquement le chrono.',
-              'Vous pouvez aussi cliquer Démarrer manuellement.',
+              'Utilisez Ouverture rapide pour ouvrir la plateforme si besoin.',
+              'Estimez le temps passé par tranches de 10 minutes.',
             ],
           ),
           _HelpSection(
-            title: '2. Pause et fin',
+            title: '2. Notes et sauvegarde',
             icon: Icons.pause_circle_outline,
             bullets: const [
-              'Pause stoppe temporairement le chrono.',
-              'Terminer sauvegarde automatiquement la session.',
-              'Ajoutez des notes avant de terminer pour garder le contexte.',
+              'Ajoutez des notes pour garder le contexte.',
+              'Ajoutez éventuellement les URLs consultées.',
+              'Sauvegarder la session l’ajoute directement à l’historique.',
             ],
           ),
           _HelpSection(
@@ -117,10 +117,18 @@ class HelpScreen extends StatelessWidget {
                     '• Si une app ne s\'ouvre pas: vérifiez qu\'elle est installée.',
                   ),
                   Text('• Sinon le fallback web s\'ouvre automatiquement.'),
-                  Text('• Si le chrono ne tourne pas, relancez une session.'),
-                  Text('• Si un lien partagé n\'apparaît pas, utilisez l\'ajout manuel dans Session.'),
-                  Text('• Si l\'IA échoue, vérifiez la clé API et le modèle choisis.'),
-                  Text('• Vérifiez régulièrement les exports JSON auto dans le stockage de l\'app.'),
+                  Text(
+                    '• Si une durée ne convient pas, ajustez-la par tranches de 10 minutes.',
+                  ),
+                  Text(
+                    '• Si un lien partagé n\'apparaît pas, utilisez l\'ajout manuel dans Session.',
+                  ),
+                  Text(
+                    '• Si l\'IA échoue, vérifiez la clé API et le modèle choisis.',
+                  ),
+                  Text(
+                    '• Vérifiez régulièrement les exports JSON auto dans le stockage de l\'app.',
+                  ),
                 ],
               ),
             ),
