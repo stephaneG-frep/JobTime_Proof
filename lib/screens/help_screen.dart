@@ -25,6 +25,7 @@ class HelpScreen extends StatelessWidget {
             bullets: const [
               'Allez dans l\'onglet Session.',
               'Choisissez une plateforme et un type d\'action.',
+              'Indiquez Candidature Oui/Non si vous savez déjà que la session contient une candidature.',
               'Utilisez Ouverture rapide pour ouvrir la plateforme si besoin.',
               'Estimez le temps passé par tranches de 10 minutes.',
             ],
@@ -35,6 +36,7 @@ class HelpScreen extends StatelessWidget {
             bullets: const [
               'Ajoutez des notes pour garder le contexte.',
               'Ajoutez éventuellement les URLs consultées.',
+              'Les liens ajoutés à la session deviennent des preuves URL sauvegardées.',
               'Sauvegarder la session l’ajoute directement à l’historique.',
             ],
           ),
@@ -45,6 +47,7 @@ class HelpScreen extends StatelessWidget {
               'Depuis Historique, ouvrez une session.',
               'Ajoutez une preuve: image (caméra/galerie), PDF, URL ou note.',
               'Touchez une preuve pour l\'ouvrir: image en aperçu, PDF via app externe, URL dans navigateur.',
+              'Sur chaque preuve URL, utilisez le bouton coche pour marquer postulé/non postulé.',
               'Chaque preuve est horodatée et conservée en local.',
             ],
           ),
@@ -53,8 +56,10 @@ class HelpScreen extends StatelessWidget {
             icon: Icons.history,
             bullets: const [
               'Filtrez par plateforme, type d\'action et date.',
+              'Activez le filtre Sans preuve pour repérer les sessions à compléter.',
               'Utilisez la recherche mot-clé pour retrouver rapidement une session.',
               'Dans le détail, utilisez J\'ai postulé (Oui/Non) pour qualifier la session.',
+              'Les sessions sans preuve sont signalées avec une icône d\'alerte.',
               'Vous pouvez supprimer une session depuis son détail.',
             ],
           ),
@@ -66,7 +71,9 @@ class HelpScreen extends StatelessWidget {
               'Sélectionnez une période.',
               'Vérifiez les stats (temps, sessions, candidatures) puis générez le PDF.',
               'Le PDF inclut toutes les preuves: images, PDF, liens (avec QR), notes.',
+              'Les URLs marquées postulé apparaissent en vert dans le PDF.',
               'Utilisez aussi Rapport prêt à présenter pour une version synthétique (plus courte).',
+              'Utilisez Export ZIP complet pour récupérer le JSON et les fichiers de preuve.',
             ],
           ),
           _HelpSection(
@@ -79,6 +86,8 @@ class HelpScreen extends StatelessWidget {
               'Configurez la plateforme Autre (schéma app + URL web).',
               'Configurez l\'IA: clé API OpenAI + modèle (gpt-4.1-mini, gpt-4.1, gpt-4o-mini).',
               'Exportez/Importez vos données JSON.',
+              'Exportez un ZIP complet pour sauvegarder aussi les fichiers de preuves.',
+              'Utilisez Réparer les données locales pour nettoyer les plateformes en doublon.',
               'Une sauvegarde JSON automatique est lancée une fois par jour au démarrage.',
             ],
           ),
@@ -124,10 +133,16 @@ class HelpScreen extends StatelessWidget {
                     '• Si un lien partagé n\'apparaît pas, utilisez l\'ajout manuel dans Session.',
                   ),
                   Text(
+                    '• Si une plateforme apparaît en doublon, utilisez Paramètres > Réparer les données locales.',
+                  ),
+                  Text(
+                    '• Si une session affiche une alerte, ajoutez une preuve ou vérifiez qu\'elle est volontairement sans preuve.',
+                  ),
+                  Text(
                     '• Si l\'IA échoue, vérifiez la clé API et le modèle choisis.',
                   ),
                   Text(
-                    '• Vérifiez régulièrement les exports JSON auto dans le stockage de l\'app.',
+                    '• Vérifiez régulièrement les exports JSON ou ZIP dans le stockage de l\'app.',
                   ),
                 ],
               ),
