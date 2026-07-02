@@ -4,11 +4,18 @@ import 'package:intl/intl.dart';
 import '../models/job_proof.dart';
 
 class ProofCard extends StatelessWidget {
-  const ProofCard({super.key, required this.proof, this.onShowQr, this.onTap});
+  const ProofCard({
+    super.key,
+    required this.proof,
+    this.onShowQr,
+    this.onTap,
+    this.onDidApplyChanged,
+  });
 
   final JobProof proof;
   final VoidCallback? onShowQr;
   final VoidCallback? onTap;
+  final ValueChanged<bool>? onDidApplyChanged;
 
   IconData _icon(JobProofType type) {
     switch (type) {
@@ -29,18 +36,39 @@ class ProofCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(_icon(proof.type)),
+        leading: Icon(
+          proof.didApply ? Icons.check_circle : _icon(proof.type),
+          color: proof.didApply ? Theme.of(context).colorScheme.primary : null,
+        ),
         title: Text(proof.title),
         subtitle: Text(
-          '${proof.description ?? ''}\n${DateFormat('dd/MM/yyyy HH:mm').format(proof.createdAt)}',
+          '${proof.didApply ? 'Postulé\n' : ''}${proof.description ?? ''}\n${DateFormat('dd/MM/yyyy HH:mm').format(proof.createdAt)}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
         trailing: proof.url != null && proof.url!.trim().isNotEmpty
-            ? IconButton(
-                onPressed: onShowQr,
-                icon: const Icon(Icons.qr_code_2),
-                tooltip: 'Afficher QR',
+            ? Wrap(
+                spacing: 4,
+                children: [
+                  IconButton(
+                    onPressed: onShowQr,
+                    icon: const Icon(Icons.qr_code_2),
+                    tooltip: 'Afficher QR',
+                  ),
+                  IconButton(
+                    onPressed: onDidApplyChanged == null
+                        ? null
+                        : () => onDidApplyChanged!(!proof.didApply),
+                    icon: Icon(
+                      proof.didApply
+                          ? Icons.check_circle
+                          : Icons.check_circle_outline,
+                    ),
+                    tooltip: proof.didApply
+                        ? 'Marquer non postulé'
+                        : 'Marquer postulé',
+                  ),
+                ],
               )
             : null,
       ),

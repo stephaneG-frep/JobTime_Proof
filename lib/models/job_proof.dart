@@ -11,6 +11,7 @@ class JobProof {
     this.filePath,
     this.url,
     this.description,
+    this.didApply = false,
     required this.createdAt,
   });
 
@@ -21,7 +22,32 @@ class JobProof {
   final String? filePath;
   final String? url;
   final String? description;
+  final bool didApply;
   final DateTime createdAt;
+
+  JobProof copyWith({
+    String? id,
+    String? sessionId,
+    String? title,
+    JobProofType? type,
+    String? filePath,
+    String? url,
+    String? description,
+    bool? didApply,
+    DateTime? createdAt,
+  }) {
+    return JobProof(
+      id: id ?? this.id,
+      sessionId: sessionId ?? this.sessionId,
+      title: title ?? this.title,
+      type: type ?? this.type,
+      filePath: filePath ?? this.filePath,
+      url: url ?? this.url,
+      description: description ?? this.description,
+      didApply: didApply ?? this.didApply,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -31,6 +57,7 @@ class JobProof {
     'filePath': filePath,
     'url': url,
     'description': description,
+    'didApply': didApply,
     'createdAt': createdAt.toIso8601String(),
   };
 
@@ -45,6 +72,7 @@ class JobProof {
     filePath: json['filePath'] as String?,
     url: json['url'] as String?,
     description: json['description'] as String?,
+    didApply: (json['didApply'] as bool?) ?? false,
     createdAt: DateTime.parse(json['createdAt'] as String),
   );
 }
@@ -81,6 +109,7 @@ class JobProofAdapter extends TypeAdapter<JobProof> {
       filePath: fields[4] as String?,
       url: fields[5] as String?,
       description: fields[6] as String?,
+      didApply: (fields[8] as bool?) ?? false,
       createdAt: fields[7] as DateTime,
     );
   }
@@ -88,7 +117,7 @@ class JobProofAdapter extends TypeAdapter<JobProof> {
   @override
   void write(BinaryWriter writer, JobProof obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -104,6 +133,8 @@ class JobProofAdapter extends TypeAdapter<JobProof> {
       ..writeByte(6)
       ..write(obj.description)
       ..writeByte(7)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(8)
+      ..write(obj.didApply);
   }
 }

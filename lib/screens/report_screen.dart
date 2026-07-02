@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../models/job_session.dart';
 import '../providers/session_provider.dart';
+import '../providers/settings_provider.dart';
+import '../services/file_service.dart';
 import '../services/pdf_report_service.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class ReportScreen extends StatefulWidget {
 class _ReportScreenState extends State<ReportScreen> {
   DateTimeRange? _range;
   final _pdfService = PdfReportService();
+  final _fileService = FileService();
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   String _formatDuration(int totalSeconds) {
@@ -27,6 +30,7 @@ class _ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SessionProvider>();
+    final settings = context.watch<SettingsProvider>();
     final from = _range?.start;
     final to = _range?.end;
     final sessions = (from != null && to != null)
@@ -42,6 +46,7 @@ class _ReportScreenState extends State<ReportScreen> {
       (sum, s) => sum + s.durationSeconds,
     );
     final applicationsCount = sessions.where((s) => s.didApply).length;
+    final missingProofsCount = sessions.where((s) => s.proofs.isEmpty).length;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -94,6 +99,13 @@ class _ReportScreenState extends State<ReportScreen> {
                       Chip(
                         avatar: const Icon(Icons.send_outlined, size: 18),
                         label: Text('Candidatures: $applicationsCount'),
+                      ),
+                      Chip(
+                        avatar: const Icon(
+                          Icons.warning_amber_outlined,
+                          size: 18,
+                        ),
+                        label: Text('Sans preuve: $missingProofsCount'),
                       ),
                     ],
                   ),
@@ -158,6 +170,26 @@ class _ReportScreenState extends State<ReportScreen> {
                         },
                   icon: const Icon(Icons.slideshow_outlined),
                   label: const Text('Rapport prêt à présenter'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _range == null || sessions.isEmpty
+                      ? null
+                      : () async {
+                          final path = await _fileService.exportCompleteZip(
+                            sessions: sessions,
+                            settings: settings.settings,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Export ZIP créé: $path'),
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.folder_zip_outlined),
+                  label: const Text('Exporter ZIP complet'),
                 ),
                 if (_range != null && sessions.isEmpty)
                   const Padding(

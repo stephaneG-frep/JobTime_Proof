@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -85,6 +86,40 @@ class FileService {
       const JsonEncoder.withIndent('  ').convert(payload),
     );
     return file.path;
+  }
+
+  Future<String> exportCompleteZip({
+    required List<JobSession> sessions,
+    required AppSettings settings,
+  }) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final now = DateTime.now();
+    final jsonPath = await exportDataToJson(sessions: sessions, settings: settings);
+    final zipPath =
+        '${directory.path}/jobtime_proof_complete_${now.millisecondsSinceEpoch}.zip';
+    final encoder = ZipFileEncoder()..create(zipPath);
+
+    encoder.addFile(File(jsonPath), 'jobtime_proof_export.json');
+    for (final session in sessions) {
+      for (final proof in session.proofs) {
+        final path = proof.filePath?.trim();
+        if (path == null || path.isEmpty) continue;
+        final file = File(path);
+        if (!await file.exists()) continue;
+        final safeName = proof.title
+            .replaceAll(RegExp(r'[^a-zA-Z0-9._-]+'), '_')
+            .replaceAll(RegExp(r'_+'), '_');
+        final extension = file.uri.pathSegments.last.contains('.')
+            ? '.${file.uri.pathSegments.last.split('.').last}'
+            : '';
+        encoder.addFile(
+          file,
+          'proofs/${session.id}/${proof.id}_${safeName.isEmpty ? 'preuve' : safeName}$extension',
+        );
+      }
+    }
+    encoder.close();
+    return zipPath;
   }
 
   Future<(AppSettings, List<JobSession>)> importDataFromJson(

@@ -25,8 +25,15 @@ class SettingsProvider extends ChangeNotifier {
   ];
 
   List<String> get allPlatforms {
-    final merged = <String>{...basePlatforms, ..._settings.customPlatforms};
-    return merged.toList()..sort();
+    final byKey = <String, String>{};
+    for (final platform in [...basePlatforms, ..._settings.customPlatforms]) {
+      final normalized = platform.trim();
+      if (normalized.isEmpty) continue;
+      final key = normalized.toLowerCase();
+      byKey.putIfAbsent(key, () => normalized);
+    }
+    return byKey.values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   }
 
   List<String> get aiProviders => const ['openai', 'gemini', 'mistral'];
@@ -69,11 +76,34 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> addCustomPlatform(String name) async {
     final trimmed = name.trim();
-    if (trimmed.isEmpty || _settings.customPlatforms.contains(trimmed)) return;
+    final exists = allPlatforms.any(
+      (platform) => platform.toLowerCase() == trimmed.toLowerCase(),
+    );
+    if (trimmed.isEmpty || exists) return;
     final updated = [..._settings.customPlatforms, trimmed];
     _settings = _settings.copyWith(customPlatforms: updated);
     await HiveService.settingsBox.put('main', _settings);
     notifyListeners();
+  }
+
+  Future<int> cleanCustomPlatforms() async {
+    final cleaned = <String>[];
+    final seen = basePlatforms.map((platform) => platform.toLowerCase()).toSet();
+
+    for (final platform in _settings.customPlatforms) {
+      final normalized = platform.trim();
+      if (normalized.isEmpty) continue;
+      final key = normalized.toLowerCase();
+      if (seen.contains(key)) continue;
+      seen.add(key);
+      cleaned.add(normalized);
+    }
+
+    final removedCount = _settings.customPlatforms.length - cleaned.length;
+    _settings = _settings.copyWith(customPlatforms: cleaned);
+    await HiveService.settingsBox.put('main', _settings);
+    notifyListeners();
+    return removedCount;
   }
 
   Future<void> removeCustomPlatform(String name) async {

@@ -311,6 +311,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final removed = await settingsProvider.cleanCustomPlatforms();
+                    final updatedSessions = await sessionProvider
+                        .normalizePlatformNames(settingsProvider.allPlatforms);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Réparation terminée: $removed plateforme(s) nettoyée(s), $updatedSessions session(s) mise(s) à jour.',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.build_circle_outlined),
+                  label: const Text('Réparer les données locales'),
+                ),
               ],
             ),
           ),
@@ -335,6 +354,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Exporter JSON'),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  onPressed: () async {
+                    final path = await _fileService.exportCompleteZip(
+                      sessions: sessionProvider.sessions,
+                      settings: settingsProvider.settings,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Export ZIP complet créé: $path')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.folder_zip_outlined),
+                  label: const Text('Exporter ZIP complet'),
                 ),
                 const SizedBox(height: 8),
                 FilledButton.tonalIcon(

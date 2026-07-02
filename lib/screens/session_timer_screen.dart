@@ -80,10 +80,22 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
   Widget build(BuildContext context) {
     final sessionProvider = context.watch<SessionProvider>();
     final settingsProvider = context.watch<SettingsProvider>();
+    final platforms = settingsProvider.allPlatforms;
+    final selectedPlatform = _safeDropdownValue(
+      sessionProvider.selectedPlatform,
+      platforms,
+      fallback: 'France Travail',
+    );
+    final actionTypes = sessionProvider.actionTypes;
+    final selectedActionType = _safeDropdownValue(
+      sessionProvider.selectedActionType,
+      actionTypes,
+      fallback: actionTypes.first,
+    );
 
-    Uri? platformWebUrl = _platformWebUrls[sessionProvider.selectedPlatform];
-    Uri? platformAppUrl = _platformAppUrls[sessionProvider.selectedPlatform];
-    if (sessionProvider.selectedPlatform == 'Autre') {
+    Uri? platformWebUrl = _platformWebUrls[selectedPlatform];
+    Uri? platformAppUrl = _platformAppUrls[selectedPlatform];
+    if (selectedPlatform == 'Autre') {
       final webRaw = settingsProvider.settings.otherPlatformWebUrl.trim();
       final appRaw = settingsProvider.settings.otherPlatformAppScheme.trim();
       if (webRaw.isNotEmpty) {
@@ -236,15 +248,18 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
           ),
         ),
         DropdownButtonFormField<String>(
-          initialValue: sessionProvider.selectedPlatform,
+          initialValue: selectedPlatform,
+          isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Plateforme',
             border: OutlineInputBorder(),
           ),
-          items: settingsProvider.allPlatforms
+          items: platforms
               .map(
-                (platform) =>
-                    DropdownMenuItem(value: platform, child: Text(platform)),
+                (platform) => DropdownMenuItem(
+                  value: platform,
+                  child: Text(platform, overflow: TextOverflow.ellipsis),
+                ),
               )
               .toList(),
           onChanged: (v) {
@@ -253,21 +268,61 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          initialValue: sessionProvider.selectedActionType,
+          initialValue: selectedActionType,
+          isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Type d\'action',
             border: OutlineInputBorder(),
           ),
-          items: sessionProvider.actionTypes
-              .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+          items: actionTypes
+              .map(
+                (type) => DropdownMenuItem(
+                  value: type,
+                  child: Text(type, overflow: TextOverflow.ellipsis),
+                ),
+              )
               .toList(),
           onChanged: (v) {
             if (v != null) sessionProvider.setActionType(v);
           },
         ),
         const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Candidature',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment<bool>(
+                      value: true,
+                      label: Text('Oui'),
+                      icon: Icon(Icons.check_circle_outline),
+                    ),
+                    ButtonSegment<bool>(
+                      value: false,
+                      label: Text('Non'),
+                      icon: Icon(Icons.radio_button_unchecked),
+                    ),
+                  ],
+                  selected: {sessionProvider.draftDidApply},
+                  onSelectionChanged: (selected) {
+                    sessionProvider.setDraftDidApply(selected.first);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         QuickStartCard(
-          platform: sessionProvider.selectedPlatform,
+          platform: selectedPlatform,
           enabled: platformWebUrl != null,
           onPressed: platformWebUrl == null
               ? null
@@ -388,5 +443,22 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
     _notesController.dispose();
     _manualUrlController.dispose();
     super.dispose();
+  }
+
+  String _safeDropdownValue(
+    String selected,
+    List<String> values, {
+    required String fallback,
+  }) {
+    if (values.contains(selected)) return selected;
+    final selectedKey = selected.trim().toLowerCase();
+    for (final value in values) {
+      if (value.trim().toLowerCase() == selectedKey) return value;
+    }
+    return values.contains(fallback)
+        ? fallback
+        : values.isNotEmpty
+            ? values.first
+            : selected;
   }
 }

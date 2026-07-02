@@ -23,7 +23,7 @@ class PdfReportService {
       (sum, s) => sum + s.durationSeconds,
     );
     final totalHours = (totalSeconds / 3600).toStringAsFixed(2);
-    final candidatures = sessions.where((s) => s.didApply).length;
+    final candidatures = sessions.where(_sessionHasApplication).length;
     final platforms = sessions.map((e) => e.platform).toSet().toList()..sort();
     final sessionsByStart = [...sessions]
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
@@ -230,7 +230,7 @@ class PdfReportService {
       0,
       (sum, s) => sum + s.durationSeconds,
     );
-    final applicationsCount = sessions.where((s) => s.didApply).length;
+    final applicationsCount = sessions.where(_sessionHasApplication).length;
     final byPlatform = <String, int>{};
     for (final s in sessions) {
       byPlatform[s.platform] =
@@ -313,15 +313,22 @@ class PdfReportService {
         pw.Container(
           margin: const pw.EdgeInsets.only(bottom: 6),
           padding: const pw.EdgeInsets.all(6),
-          decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.3)),
+          decoration: pw.BoxDecoration(
+            color: proof.didApply ? PdfColors.green50 : null,
+            border: pw.Border.all(
+              width: proof.didApply ? 0.8 : 0.3,
+              color: proof.didApply ? PdfColors.green700 : PdfColors.black,
+            ),
+          ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                '${_proofTypeLabel(proof.type)} - ${proof.title}',
+                '${proof.didApply ? 'POSTULÉ - ' : ''}${_proofTypeLabel(proof.type)} - ${proof.title}',
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 10,
+                  color: proof.didApply ? PdfColors.green800 : PdfColors.black,
                 ),
               ),
               if (proof.description != null &&
@@ -415,6 +422,15 @@ class PdfReportService {
           ];
         }
         return [
+          if (proof.didApply)
+            pw.Text(
+              'Statut: candidature envoyée',
+              style: pw.TextStyle(
+                fontSize: 9,
+                color: PdfColors.green800,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
           pw.SizedBox(height: 4),
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -449,5 +465,9 @@ class PdfReportService {
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
     return '${hours}h ${minutes.toString().padLeft(2, '0')}';
+  }
+
+  bool _sessionHasApplication(JobSession session) {
+    return session.didApply || session.proofs.any((proof) => proof.didApply);
   }
 }

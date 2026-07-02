@@ -33,6 +33,7 @@ class SessionProvider extends ChangeNotifier {
   bool _isPaused = false;
 
   String _draftNotes = '';
+  bool _draftDidApply = false;
   final List<String> _draftUrls = [];
   String? _pendingSharedUrl;
 
@@ -48,6 +49,7 @@ class SessionProvider extends ChangeNotifier {
   bool get isRunning => _isRunning;
   bool get isPaused => _isPaused;
   String get draftNotes => _draftNotes;
+  bool get draftDidApply => _draftDidApply;
   List<String> get draftUrls => List.unmodifiable(_draftUrls);
   String? get pendingSharedUrl => _pendingSharedUrl;
 
@@ -66,12 +68,21 @@ class SessionProvider extends ChangeNotifier {
 
   void setActionType(String value) {
     _selectedActionType = value;
+    if (value.toLowerCase().contains('candidature')) {
+      _draftDidApply = true;
+    }
     _persistDraftState();
     notifyListeners();
   }
 
   void setDraftNotes(String value) {
     _draftNotes = value;
+    _persistDraftState();
+    notifyListeners();
+  }
+
+  void setDraftDidApply(bool value) {
+    _draftDidApply = value;
     _persistDraftState();
     notifyListeners();
   }
@@ -155,7 +166,8 @@ class SessionProvider extends ChangeNotifier {
     _timer?.cancel();
 
     final now = DateTime.now();
-    final didApply = _selectedActionType.toLowerCase().contains('candidature');
+    final didApply =
+        _draftDidApply || _selectedActionType.toLowerCase().contains('candidature');
     final urlProofs = _draftUrls
         .map(
           (url) => JobProof(
@@ -206,6 +218,7 @@ class SessionProvider extends ChangeNotifier {
     _isRunning = false;
     _isPaused = false;
     _draftNotes = '';
+    _draftDidApply = false;
     _draftUrls.clear();
     _pendingSharedUrl = null;
     await HiveService.runtimeBox.delete(_draftStateKey);
@@ -219,7 +232,8 @@ class SessionProvider extends ChangeNotifier {
     final safeMinutes = minutes < 1 ? 10 : minutes;
     final start = now.subtract(Duration(minutes: safeMinutes));
     final sessionId = now.microsecondsSinceEpoch.toString();
-    final didApply = _selectedActionType.toLowerCase().contains('candidature');
+    final didApply =
+        _draftDidApply || _selectedActionType.toLowerCase().contains('candidature');
     final finalizedProofs = _draftUrls
         .map(
           (url) => JobProof(
@@ -250,6 +264,7 @@ class SessionProvider extends ChangeNotifier {
     _sessions.insert(0, session);
 
     _draftNotes = '';
+    _draftDidApply = false;
     _draftUrls.clear();
     _pendingSharedUrl = null;
     await HiveService.runtimeBox.delete(_draftStateKey);
@@ -264,6 +279,32 @@ class SessionProvider extends ChangeNotifier {
 
     final updatedProofs = [..._sessions[index].proofs, proof];
     final updated = _sessions[index].copyWith(proofs: updatedProofs);
+
+    _sessions[index] = updated;
+    await HiveService.sessionsBox.put(updated.id, updated);
+    notifyListeners();
+  }
+
+  Future<void> setProofDidApply({
+    required String sessionId,
+    required String proofId,
+    required bool didApply,
+  }) async {
+    final index = _sessions.indexWhere((s) => s.id == sessionId);
+    if (index == -1) return;
+
+    final session = _sessions[index];
+    final updatedProofs = session.proofs
+        .map(
+          (proof) => proof.id == proofId
+              ? proof.copyWith(didApply: didApply)
+              : proof,
+        )
+        .toList();
+    final updated = session.copyWith(
+      proofs: updatedProofs,
+      didApply: session.didApply || updatedProofs.any((proof) => proof.didApply),
+    );
 
     _sessions[index] = updated;
     await HiveService.sessionsBox.put(updated.id, updated);
@@ -323,6 +364,36 @@ class SessionProvider extends ChangeNotifier {
   int totalProofsCount() =>
       _sessions.fold<int>(0, (sum, s) => sum + s.proofs.length);
 
+  int sessionsWithoutProofCount() =>
+      _sessions.where((session) => session.proofs.isEmpty).length;
+
+  Future<int> normalizePlatformNames(List<String> validPlatforms) async {
+    var updatedCount = 0;
+    final normalizedByKey = {
+      for (final platform in validPlatforms) platform.trim().toLowerCase(): platform,
+    };
+
+    for (var i = 0; i < _sessions.length; i++) {
+      final current = _sessions[i].platform.trim();
+      final normalized = normalizedByKey[current.toLowerCase()];
+      if (normalized == null || normalized == _sessions[i].platform) continue;
+      final updated = _sessions[i].copyWith(platform: normalized);
+      _sessions[i] = updated;
+      await HiveService.sessionsBox.put(updated.id, updated);
+      updatedCount++;
+    }
+
+    final selected = normalizedByKey[_selectedPlatform.trim().toLowerCase()];
+    if (selected != null && selected != _selectedPlatform) {
+      _selectedPlatform = selected;
+      _persistDraftState();
+      updatedCount++;
+    }
+
+    if (updatedCount > 0) notifyListeners();
+    return updatedCount;
+  }
+
   int totalSecondsToday() {
     final now = DateTime.now();
     return _sessions
@@ -372,6 +443,7 @@ class SessionProvider extends ChangeNotifier {
       'isRunning': _isRunning,
       'isPaused': _isPaused,
       'draftNotes': _draftNotes,
+      'draftDidApply': _draftDidApply,
       'draftUrls': _draftUrls,
       'pendingSharedUrl': _pendingSharedUrl,
     };
@@ -394,6 +466,9 @@ class SessionProvider extends ChangeNotifier {
     _isRunning = (raw['isRunning'] as bool?) ?? false;
     _isPaused = (raw['isPaused'] as bool?) ?? false;
     _draftNotes = (raw['draftNotes'] as String?) ?? '';
+    _draftDidApply =
+        (raw['draftDidApply'] as bool?) ??
+        _selectedActionType.toLowerCase().contains('candidature');
     _draftUrls
       ..clear()
       ..addAll(

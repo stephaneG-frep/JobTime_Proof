@@ -20,6 +20,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _action = 'Tous';
   DateTimeRange? _range;
   String _keyword = '';
+  bool _withoutProofOnly = false;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +40,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           s.notes.toLowerCase().contains(_keyword.toLowerCase()) ||
           s.platform.toLowerCase().contains(_keyword.toLowerCase()) ||
           s.actionType.toLowerCase().contains(_keyword.toLowerCase());
-      return platformOk && actionOk && dateOk && keywordOk;
+      final proofOk = !_withoutProofOnly || s.proofs.isEmpty;
+      return platformOk && actionOk && dateOk && keywordOk && proofOk;
     }).toList();
 
     return Column(
@@ -57,41 +59,74 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 onChanged: (v) => setState(() => _keyword = v),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _platform,
-                      decoration: const InputDecoration(
-                        labelText: 'Plateforme',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ['Toutes', ...settings.allPlatforms]
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _platform = v ?? 'Toutes'),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 420;
+                  final platformField = DropdownButtonFormField<String>(
+                    initialValue: _platform,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Plateforme',
+                      border: OutlineInputBorder(),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _action,
-                      decoration: const InputDecoration(
-                        labelText: 'Action',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ['Tous', ...provider.actionTypes]
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _action = v ?? 'Tous'),
+                    items: ['Toutes', ...settings.allPlatforms]
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _platform = v ?? 'Toutes'),
+                  );
+                  final actionField = DropdownButtonFormField<String>(
+                    initialValue: _action,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Action',
+                      border: OutlineInputBorder(),
                     ),
-                  ),
-                ],
+                    items: ['Tous', ...provider.actionTypes]
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _action = v ?? 'Tous'),
+                  );
+
+                  if (compact) {
+                    return Column(
+                      children: [
+                        platformField,
+                        const SizedBox(height: 8),
+                        actionField,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: platformField),
+                      const SizedBox(width: 8),
+                      Expanded(child: actionField),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilterChip(
+                  avatar: const Icon(Icons.warning_amber_outlined),
+                  label: const Text('Sans preuve'),
+                  selected: _withoutProofOnly,
+                  onSelected: (selected) =>
+                      setState(() => _withoutProofOnly = selected),
+                ),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
@@ -109,6 +144,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   _range == null
                       ? 'Filtrer par date'
                       : '${DateFormat('dd/MM/yyyy').format(_range!.start)} - ${DateFormat('dd/MM/yyyy').format(_range!.end)}',
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

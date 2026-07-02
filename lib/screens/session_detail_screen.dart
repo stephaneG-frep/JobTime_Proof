@@ -161,6 +161,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 onShowQr: p.url != null && p.url!.trim().isNotEmpty
                     ? () => _showQrDialog(context, p.title, p.url!)
                     : null,
+                onDidApplyChanged: p.url != null && p.url!.trim().isNotEmpty
+                    ? (value) => provider.setProofDidApply(
+                          sessionId: activeSession.id,
+                          proofId: p.id,
+                          didApply: value,
+                        )
+                    : null,
                 onTap: () => _openProof(context, p),
               ),
             ),

@@ -18,8 +18,24 @@ class SessionCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: ListTile(
         onTap: onTap,
-        title: Text('${session.platform} - ${session.actionType}'),
-        subtitle: Text('$start • $duration\nPreuves: ${session.proofs.length}'),
+        leading: Icon(
+          session.proofs.isEmpty
+              ? Icons.warning_amber_outlined
+              : Icons.verified_outlined,
+          color: session.proofs.isEmpty
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          '${session.platform} - ${session.actionType}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '$start • $duration\nPreuves: ${session.proofs.length}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
         isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),
       ),

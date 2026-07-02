@@ -22,6 +22,7 @@ class DashboardScreen extends StatelessWidget {
     final today = sessions.totalSecondsToday();
     final week = sessions.totalSecondsWeek();
     final goalSeconds = settings.settings.weeklyGoalHours * 3600;
+    final missingProofs = sessions.sessionsWithoutProofCount();
     final progress = goalSeconds == 0
         ? 0.0
         : (week / goalSeconds).clamp(0, 1).toDouble();
@@ -57,9 +58,12 @@ class DashboardScreen extends StatelessWidget {
               icon: Icons.timer,
             ),
             StatCard(
-              title: 'Preuves',
-              value: '${sessions.totalProofsCount()}',
-              icon: Icons.verified,
+              title: 'Sans preuve',
+              value: '$missingProofs',
+              icon: Icons.warning_amber_outlined,
+              color: missingProofs == 0
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.error,
             ),
           ],
         ),
