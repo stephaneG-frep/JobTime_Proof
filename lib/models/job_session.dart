@@ -29,6 +29,9 @@ class JobSession {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  int get proofCount => proofs.length;
+  bool get hasProofs => proofCount > 0;
+
   JobSession copyWith({
     String? platform,
     String? actionType,
@@ -118,7 +121,8 @@ class JobSessionAdapter extends TypeAdapter<JobSession> {
       notes: (fields[6] as String?) ?? '',
       proofs: (rawProofs ?? const <dynamic>[]).cast<JobProof>(),
       didApply:
-          (fields[10] as bool?) ?? actionType.toLowerCase().contains('candidature'),
+          (fields[10] as bool?) ??
+          actionType.toLowerCase().contains('candidature'),
       createdAt: (fields[8] as DateTime?) ?? now,
       updatedAt: (fields[9] as DateTime?) ?? now,
     );

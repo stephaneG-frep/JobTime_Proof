@@ -163,10 +163,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     : null,
                 onDidApplyChanged: p.url != null && p.url!.trim().isNotEmpty
                     ? (value) => provider.setProofDidApply(
-                          sessionId: activeSession.id,
-                          proofId: p.id,
-                          didApply: value,
-                        )
+                        sessionId: activeSession.id,
+                        proofId: p.id,
+                        didApply: value,
+                      )
                     : null,
                 onTap: () => _openProof(context, p),
               ),
@@ -423,7 +423,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               if (!context.mounted) return;
               final sessionProvider = context.read<SessionProvider>();
               await sessionProvider.addProof(session.id, proof);
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Preuve ajoutée à la session.')),
+                );
+              }
             },
             child: const Text('Ajouter'),
           ),

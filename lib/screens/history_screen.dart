@@ -40,7 +40,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           s.notes.toLowerCase().contains(_keyword.toLowerCase()) ||
           s.platform.toLowerCase().contains(_keyword.toLowerCase()) ||
           s.actionType.toLowerCase().contains(_keyword.toLowerCase());
-      final proofOk = !_withoutProofOnly || s.proofs.isEmpty;
+      final proofOk = !_withoutProofOnly || !s.hasProofs;
       return platformOk && actionOk && dateOk && keywordOk && proofOk;
     }).toList();
 
@@ -77,8 +77,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                         )
                         .toList(),
-                    onChanged: (v) =>
-                        setState(() => _platform = v ?? 'Toutes'),
+                    onChanged: (v) => setState(() => _platform = v ?? 'Toutes'),
                   );
                   final actionField = DropdownButtonFormField<String>(
                     initialValue: _action,

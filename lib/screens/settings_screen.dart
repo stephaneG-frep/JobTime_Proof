@@ -314,7 +314,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    final removed = await settingsProvider.cleanCustomPlatforms();
+                    final removed = await settingsProvider
+                        .cleanCustomPlatforms();
                     final updatedSessions = await sessionProvider
                         .normalizePlatformNames(settingsProvider.allPlatforms);
                     if (context.mounted) {
@@ -339,92 +340,110 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FilledButton.tonalIcon(
-                  onPressed: () async {
-                    final path = await _fileService.exportDataToJson(
-                      sessions: sessionProvider.sessions,
-                      settings: settingsProvider.settings,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Export JSON créé: $path')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Exporter JSON'),
-                ),
-                const SizedBox(height: 8),
-                FilledButton.tonalIcon(
-                  onPressed: () async {
-                    final path = await _fileService.exportCompleteZip(
-                      sessions: sessionProvider.sessions,
-                      settings: settingsProvider.settings,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Export ZIP complet créé: $path')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.folder_zip_outlined),
-                  label: const Text('Exporter ZIP complet'),
-                ),
-                const SizedBox(height: 8),
-                FilledButton.tonalIcon(
-                  onPressed: () async {
-                    final path = await _fileService.pickJson();
-                    if (path == null) return;
-                    final (settings, sessions) = await _fileService
-                        .importDataFromJson(path);
-                    await settingsProvider.replaceFromImport(settings);
-                    await sessionProvider.replaceAllSessions(sessions);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Import JSON terminé.')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.download_for_offline),
-                  label: const Text('Importer JSON'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('Suppression complète'),
-                        content: const Text(
-                          'Confirmez la suppression de toutes les données locales.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Annuler'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Confirmer'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirmed == true) {
-                      await sessionProvider.clearAll();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Données supprimées.')),
+                const Text('Import, export et données'),
+                const SizedBox(height: 10),
+                GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.12,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _SettingsActionCard(
+                      icon: Icons.upload_file,
+                      title: 'Export JSON',
+                      subtitle: 'Données seules',
+                      onTap: () async {
+                        final path = await _fileService.exportDataToJson(
+                          sessions: sessionProvider.sessions,
+                          settings: settingsProvider.settings,
                         );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.delete_forever),
-                  label: const Text('Supprimer toutes les données'),
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Export JSON créé: $path')),
+                          );
+                        }
+                      },
+                    ),
+                    _SettingsActionCard(
+                      icon: Icons.folder_zip_outlined,
+                      title: 'Export ZIP',
+                      subtitle: 'JSON + preuves',
+                      onTap: () async {
+                        final path = await _fileService.exportCompleteZip(
+                          sessions: sessionProvider.sessions,
+                          settings: settingsProvider.settings,
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Export ZIP complet créé: $path'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    _SettingsActionCard(
+                      icon: Icons.download_for_offline,
+                      title: 'Import JSON',
+                      subtitle: 'Restaurer',
+                      onTap: () async {
+                        final path = await _fileService.pickJson();
+                        if (path == null) return;
+                        final (settings, sessions) = await _fileService
+                            .importDataFromJson(path);
+                        await settingsProvider.replaceFromImport(settings);
+                        await sessionProvider.replaceAllSessions(sessions);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Import JSON terminé.'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    _SettingsActionCard(
+                      icon: Icons.delete_forever,
+                      title: 'Supprimer',
+                      subtitle: 'Tout effacer',
+                      destructive: true,
+                      onTap: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text('Suppression complète'),
+                            content: const Text(
+                              'Confirmez la suppression de toutes les données locales.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Annuler'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Confirmer'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          await sessionProvider.clearAll();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Données supprimées.'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -441,5 +460,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _otherAppCtrl.dispose();
     _apiKeyCtrl.dispose();
     super.dispose();
+  }
+}
+
+class _SettingsActionCard extends StatelessWidget {
+  const _SettingsActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = destructive ? scheme.error : scheme.primary;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 28),
+              const Spacer(),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

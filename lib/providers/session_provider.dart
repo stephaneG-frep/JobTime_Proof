@@ -35,6 +35,7 @@ class SessionProvider extends ChangeNotifier {
   String _draftNotes = '';
   bool _draftDidApply = false;
   final List<String> _draftUrls = [];
+  final List<bool> _draftUrlDidApply = [];
   String? _pendingSharedUrl;
 
   DateTime? get runningStart => _runningStart;
@@ -51,6 +52,7 @@ class SessionProvider extends ChangeNotifier {
   String get draftNotes => _draftNotes;
   bool get draftDidApply => _draftDidApply;
   List<String> get draftUrls => List.unmodifiable(_draftUrls);
+  List<bool> get draftUrlDidApply => List.unmodifiable(_draftUrlDidApply);
   String? get pendingSharedUrl => _pendingSharedUrl;
 
   Future<void> load() async {
@@ -91,6 +93,7 @@ class SessionProvider extends ChangeNotifier {
     final trimmed = url.trim();
     if (trimmed.isEmpty || _draftUrls.contains(trimmed)) return;
     _draftUrls.add(trimmed);
+    _draftUrlDidApply.add(false);
     _persistDraftState();
     notifyListeners();
   }
@@ -98,12 +101,28 @@ class SessionProvider extends ChangeNotifier {
   void removeDraftUrlAt(int index) {
     if (index < 0 || index >= _draftUrls.length) return;
     _draftUrls.removeAt(index);
+    if (index < _draftUrlDidApply.length) {
+      _draftUrlDidApply.removeAt(index);
+    }
+    _draftDidApply = _draftDidApply || _draftUrlDidApply.any((value) => value);
+    _persistDraftState();
+    notifyListeners();
+  }
+
+  void setDraftUrlDidApplyAt(int index, bool value) {
+    if (index < 0 || index >= _draftUrls.length) return;
+    _syncDraftUrlFlags();
+    _draftUrlDidApply[index] = value;
+    if (value) {
+      _draftDidApply = true;
+    }
     _persistDraftState();
     notifyListeners();
   }
 
   void clearDraftUrls() {
     _draftUrls.clear();
+    _draftUrlDidApply.clear();
     _persistDraftState();
     notifyListeners();
   }
@@ -166,35 +185,27 @@ class SessionProvider extends ChangeNotifier {
     _timer?.cancel();
 
     final now = DateTime.now();
-    final didApply =
-        _draftDidApply || _selectedActionType.toLowerCase().contains('candidature');
-    final urlProofs = _draftUrls
+    final sessionId = now.microsecondsSinceEpoch.toString();
+    _syncDraftUrlFlags();
+    final finalizedProofs = _draftUrls
+        .asMap()
+        .entries
         .map(
-          (url) => JobProof(
-            id: '${now.microsecondsSinceEpoch}_${url.hashCode}',
-            sessionId: now.microsecondsSinceEpoch.toString(),
+          (entry) => JobProof(
+            id: '${now.microsecondsSinceEpoch}_${entry.value.hashCode}',
+            sessionId: sessionId,
             title: 'Lien session',
             type: JobProofType.url,
-            url: url,
+            url: entry.value,
+            didApply: _draftUrlAppliedAt(entry.key),
             createdAt: now,
           ),
         )
         .toList();
-    final sessionId = now.microsecondsSinceEpoch.toString();
-    final finalizedProofs = urlProofs
-        .map(
-          (proof) => JobProof(
-            id: proof.id,
-            sessionId: sessionId,
-            title: proof.title,
-            type: proof.type,
-            filePath: proof.filePath,
-            url: proof.url,
-            description: proof.description,
-            createdAt: proof.createdAt,
-          ),
-        )
-        .toList();
+    final didApply =
+        _draftDidApply ||
+        finalizedProofs.any((proof) => proof.didApply) ||
+        _selectedActionType.toLowerCase().contains('candidature');
     final session = JobSession(
       id: sessionId,
       platform: _selectedPlatform,
@@ -220,6 +231,7 @@ class SessionProvider extends ChangeNotifier {
     _draftNotes = '';
     _draftDidApply = false;
     _draftUrls.clear();
+    _draftUrlDidApply.clear();
     _pendingSharedUrl = null;
     await HiveService.runtimeBox.delete(_draftStateKey);
 
@@ -232,20 +244,26 @@ class SessionProvider extends ChangeNotifier {
     final safeMinutes = minutes < 1 ? 10 : minutes;
     final start = now.subtract(Duration(minutes: safeMinutes));
     final sessionId = now.microsecondsSinceEpoch.toString();
-    final didApply =
-        _draftDidApply || _selectedActionType.toLowerCase().contains('candidature');
+    _syncDraftUrlFlags();
     final finalizedProofs = _draftUrls
+        .asMap()
+        .entries
         .map(
-          (url) => JobProof(
-            id: '${now.microsecondsSinceEpoch}_${url.hashCode}',
+          (entry) => JobProof(
+            id: '${now.microsecondsSinceEpoch}_${entry.value.hashCode}',
             sessionId: sessionId,
             title: 'Lien session',
             type: JobProofType.url,
-            url: url,
+            url: entry.value,
+            didApply: _draftUrlAppliedAt(entry.key),
             createdAt: now,
           ),
         )
         .toList();
+    final didApply =
+        _draftDidApply ||
+        finalizedProofs.any((proof) => proof.didApply) ||
+        _selectedActionType.toLowerCase().contains('candidature');
     final session = JobSession(
       id: sessionId,
       platform: _selectedPlatform,
@@ -266,6 +284,7 @@ class SessionProvider extends ChangeNotifier {
     _draftNotes = '';
     _draftDidApply = false;
     _draftUrls.clear();
+    _draftUrlDidApply.clear();
     _pendingSharedUrl = null;
     await HiveService.runtimeBox.delete(_draftStateKey);
 
@@ -296,14 +315,14 @@ class SessionProvider extends ChangeNotifier {
     final session = _sessions[index];
     final updatedProofs = session.proofs
         .map(
-          (proof) => proof.id == proofId
-              ? proof.copyWith(didApply: didApply)
-              : proof,
+          (proof) =>
+              proof.id == proofId ? proof.copyWith(didApply: didApply) : proof,
         )
         .toList();
     final updated = session.copyWith(
       proofs: updatedProofs,
-      didApply: session.didApply || updatedProofs.any((proof) => proof.didApply),
+      didApply:
+          session.didApply || updatedProofs.any((proof) => proof.didApply),
     );
 
     _sessions[index] = updated;
@@ -365,12 +384,13 @@ class SessionProvider extends ChangeNotifier {
       _sessions.fold<int>(0, (sum, s) => sum + s.proofs.length);
 
   int sessionsWithoutProofCount() =>
-      _sessions.where((session) => session.proofs.isEmpty).length;
+      _sessions.where((session) => !session.hasProofs).length;
 
   Future<int> normalizePlatformNames(List<String> validPlatforms) async {
     var updatedCount = 0;
     final normalizedByKey = {
-      for (final platform in validPlatforms) platform.trim().toLowerCase(): platform,
+      for (final platform in validPlatforms)
+        platform.trim().toLowerCase(): platform,
     };
 
     for (var i = 0; i < _sessions.length; i++) {
@@ -445,6 +465,7 @@ class SessionProvider extends ChangeNotifier {
       'draftNotes': _draftNotes,
       'draftDidApply': _draftDidApply,
       'draftUrls': _draftUrls,
+      'draftUrlDidApply': _draftUrlDidApply,
       'pendingSharedUrl': _pendingSharedUrl,
     };
     box.put(_draftStateKey, map);
@@ -474,6 +495,14 @@ class SessionProvider extends ChangeNotifier {
       ..addAll(
         ((raw['draftUrls'] as List?) ?? const <dynamic>[]).cast<String>(),
       );
+    _draftUrlDidApply
+      ..clear()
+      ..addAll(
+        ((raw['draftUrlDidApply'] as List?) ?? const <dynamic>[]).map(
+          (value) => value == true,
+        ),
+      );
+    _syncDraftUrlFlags();
     _pendingSharedUrl = (raw['pendingSharedUrl'] as String?);
 
     if (_isRunning && !_isPaused) {
@@ -481,6 +510,21 @@ class SessionProvider extends ChangeNotifier {
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
         notifyListeners();
       });
+    }
+  }
+
+  bool _draftUrlAppliedAt(int index) {
+    return index >= 0 &&
+        index < _draftUrlDidApply.length &&
+        _draftUrlDidApply[index];
+  }
+
+  void _syncDraftUrlFlags() {
+    while (_draftUrlDidApply.length < _draftUrls.length) {
+      _draftUrlDidApply.add(false);
+    }
+    while (_draftUrlDidApply.length > _draftUrls.length) {
+      _draftUrlDidApply.removeLast();
     }
   }
 }

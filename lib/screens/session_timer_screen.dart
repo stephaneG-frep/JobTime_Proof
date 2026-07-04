@@ -222,23 +222,73 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                 if (sessionProvider.draftUrls.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   const Text(
-                    'URLs en attente (seront sauvegardées à la fin)',
+                    'URLs en attente',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
                   ...sessionProvider.draftUrls.asMap().entries.map(
                     (entry) => ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.link, size: 18),
+                      leading: Icon(
+                        sessionProvider.draftUrlDidApply.length > entry.key &&
+                                sessionProvider.draftUrlDidApply[entry.key]
+                            ? Icons.check_circle
+                            : Icons.link,
+                        size: 20,
+                        color:
+                            sessionProvider.draftUrlDidApply.length >
+                                    entry.key &&
+                                sessionProvider.draftUrlDidApply[entry.key]
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
                       title: Text(
                         entry.value,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: IconButton(
-                        onPressed: () =>
-                            sessionProvider.removeDraftUrlAt(entry.key),
-                        icon: const Icon(Icons.delete_outline),
+                      subtitle: Text(
+                        sessionProvider.draftUrlDidApply.length > entry.key &&
+                                sessionProvider.draftUrlDidApply[entry.key]
+                            ? 'Postulé'
+                            : 'Non postulé',
+                      ),
+                      trailing: Wrap(
+                        spacing: 2,
+                        children: [
+                          IconButton(
+                            tooltip:
+                                sessionProvider.draftUrlDidApply.length >
+                                        entry.key &&
+                                    sessionProvider.draftUrlDidApply[entry.key]
+                                ? 'Marquer non postulé'
+                                : 'Marquer postulé',
+                            onPressed: () {
+                              final current =
+                                  sessionProvider.draftUrlDidApply.length >
+                                      entry.key &&
+                                  sessionProvider.draftUrlDidApply[entry.key];
+                              sessionProvider.setDraftUrlDidApplyAt(
+                                entry.key,
+                                !current,
+                              );
+                            },
+                            icon: Icon(
+                              sessionProvider.draftUrlDidApply.length >
+                                          entry.key &&
+                                      sessionProvider.draftUrlDidApply[entry
+                                          .key]
+                                  ? Icons.check_circle
+                                  : Icons.check_circle_outline,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Retirer le lien',
+                            onPressed: () =>
+                                sessionProvider.removeDraftUrlAt(entry.key),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -458,7 +508,7 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
     return values.contains(fallback)
         ? fallback
         : values.isNotEmpty
-            ? values.first
-            : selected;
+        ? values.first
+        : selected;
   }
 }

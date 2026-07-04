@@ -19,12 +19,12 @@ class SessionCard extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         leading: Icon(
-          session.proofs.isEmpty
-              ? Icons.warning_amber_outlined
-              : Icons.verified_outlined,
-          color: session.proofs.isEmpty
-              ? Theme.of(context).colorScheme.error
-              : Theme.of(context).colorScheme.primary,
+          session.hasProofs
+              ? Icons.verified_outlined
+              : Icons.warning_amber_outlined,
+          color: session.hasProofs
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.error,
         ),
         title: Text(
           '${session.platform} - ${session.actionType}',
@@ -32,12 +32,17 @@ class SessionCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          '$start • $duration\nPreuves: ${session.proofs.length}',
+          '$start • $duration\n${session.hasProofs ? 'Preuves: ${session.proofCount}' : 'Aucune preuve'}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
         isThreeLine: true,
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(
+          session.hasProofs ? Icons.check_circle_outline : Icons.chevron_right,
+          color: session.hasProofs
+              ? Theme.of(context).colorScheme.primary
+              : null,
+        ),
       ),
     );
   }

@@ -46,7 +46,7 @@ class _ReportScreenState extends State<ReportScreen> {
       (sum, s) => sum + s.durationSeconds,
     );
     final applicationsCount = sessions.where((s) => s.didApply).length;
-    final missingProofsCount = sessions.where((s) => s.proofs.isEmpty).length;
+    final missingProofsCount = sessions.where((s) => !s.hasProofs).length;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -182,9 +182,7 @@ class _ReportScreenState extends State<ReportScreen> {
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Export ZIP créé: $path'),
-                              ),
+                              SnackBar(content: Text('Export ZIP créé: $path')),
                             );
                           }
                         },
