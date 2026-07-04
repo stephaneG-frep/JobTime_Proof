@@ -374,7 +374,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           ),
           FilledButton(
             onPressed: () async {
-              if (titleCtrl.text.trim().isEmpty) return;
               String? path;
               String? url;
 
@@ -406,11 +405,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 }
                 return;
               }
+              final title = titleCtrl.text.trim().isNotEmpty
+                  ? titleCtrl.text.trim()
+                  : _defaultProofTitle(type);
 
               final proof = JobProof(
                 id: DateTime.now().microsecondsSinceEpoch.toString(),
                 sessionId: session.id,
-                title: titleCtrl.text.trim(),
+                title: title,
                 type: type,
                 filePath: path,
                 url: url,
@@ -422,11 +424,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
               if (!context.mounted) return;
               final sessionProvider = context.read<SessionProvider>();
-              await sessionProvider.addProof(session.id, proof);
+              final updated = await sessionProvider.addProof(session.id, proof);
               if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Preuve ajoutée à la session.')),
+                  SnackBar(
+                    content: Text(
+                      'Preuve ajoutée à la session (${updated?.proofCount ?? 1}).',
+                    ),
+                  ),
                 );
               }
             },
@@ -466,5 +472,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       return _fileService.pickImageFromGallery();
     }
     return null;
+  }
+
+  String _defaultProofTitle(JobProofType type) {
+    switch (type) {
+      case JobProofType.image:
+        return 'Capture d’écran';
+      case JobProofType.pdf:
+        return 'Document PDF';
+      case JobProofType.url:
+        return 'Lien';
+      case JobProofType.note:
+        return 'Note';
+    }
   }
 }

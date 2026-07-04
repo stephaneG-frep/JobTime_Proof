@@ -292,16 +292,19 @@ class SessionProvider extends ChangeNotifier {
     return session;
   }
 
-  Future<void> addProof(String sessionId, JobProof proof) async {
+  Future<JobSession?> addProof(String sessionId, JobProof proof) async {
     final index = _sessions.indexWhere((s) => s.id == sessionId);
-    if (index == -1) return;
+    final current = index == -1
+        ? HiveService.sessionsBox.get(sessionId)
+        : _sessions[index];
+    if (current == null) return null;
 
-    final updatedProofs = [..._sessions[index].proofs, proof];
-    final updated = _sessions[index].copyWith(proofs: updatedProofs);
+    final updatedProofs = [...current.proofs, proof];
+    final updated = current.copyWith(proofs: updatedProofs);
 
-    _sessions[index] = updated;
     await HiveService.sessionsBox.put(updated.id, updated);
-    notifyListeners();
+    await load();
+    return updated;
   }
 
   Future<void> setProofDidApply({
