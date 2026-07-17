@@ -184,29 +184,37 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
               bottomNavigationBar: NavigationBar(
                 selectedIndex: _index,
                 onDestinationSelected: (i) => setState(() => _index = i),
+                labelBehavior:
+                    NavigationDestinationLabelBehavior.onlyShowSelected,
                 destinations: const [
                   NavigationDestination(
                     icon: Icon(Icons.dashboard_outlined),
-                    label: 'Tableau de bord',
+                    selectedIcon: Icon(Icons.dashboard),
+                    label: 'Accueil',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.timer_outlined),
+                    selectedIcon: Icon(Icons.timer),
                     label: 'Session',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.history),
+                    icon: Icon(Icons.history_outlined),
+                    selectedIcon: Icon(Icons.history),
                     label: 'Historique',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.description_outlined),
+                    selectedIcon: Icon(Icons.description),
                     label: 'Rapport',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.settings_outlined),
-                    label: 'Paramètres',
+                    selectedIcon: Icon(Icons.settings),
+                    label: 'Réglages',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book),
                     label: 'Aide',
                   ),
                 ],
