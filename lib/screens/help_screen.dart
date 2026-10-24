@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_palette.dart';
+
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final sectionColors = [
+      palette.blue,
+      palette.teal,
+      palette.green,
+      palette.purple,
+      palette.coral,
+      palette.orange,
+      palette.purple,
+      palette.teal,
+    ];
+    var section = 0;
     return Scaffold(
       appBar: AppBar(title: const Text('Mode d\'emploi')),
       body: ListView(
@@ -20,6 +34,7 @@ class HelpScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _HelpSection(
+            color: sectionColors[section++],
             title: '1. Déclarer une session',
             icon: Icons.play_circle_outline,
             bullets: const [
@@ -31,6 +46,7 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
           _HelpSection(
+            color: sectionColors[section++],
             title: '2. Notes et sauvegarde',
             icon: Icons.pause_circle_outline,
             bullets: const [
@@ -42,6 +58,7 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
           _HelpSection(
+            color: sectionColors[section++],
             title: '3. Ajouter des preuves',
             icon: Icons.verified_outlined,
             bullets: const [
@@ -53,6 +70,7 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
           _HelpSection(
+            color: sectionColors[section++],
             title: '4. Consulter l\'historique',
             icon: Icons.history,
             bullets: const [
@@ -65,6 +83,7 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
           _HelpSection(
+            color: sectionColors[section++],
             title: '5. Générer un rapport PDF',
             icon: Icons.picture_as_pdf_outlined,
             bullets: const [
@@ -78,6 +97,7 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
           _HelpSection(
+            color: sectionColors[section++],
             title: '6. Paramètres utiles',
             icon: Icons.settings_outlined,
             bullets: const [
@@ -85,14 +105,15 @@ class HelpScreen extends StatelessWidget {
               'Activez le thème sombre si besoin.',
               'Ajoutez des plateformes personnalisées.',
               'Configurez la plateforme Autre (schéma app + URL web).',
-              'Configurez l\'IA: clé API OpenAI + modèle (gpt-4.1-mini, gpt-4.1, gpt-4o-mini).',
-              'Utilisez les cards Export JSON, Export ZIP, Import JSON et Supprimer pour gérer vos données.',
+              'Configurez l\'IA: fournisseur (OpenAI, Claude, Gemini, Mistral, Grok ou Perplexity), clé API et modèle. Pour Perplexity, le « modèle » est le niveau de recherche web (fast à high).',
+              'Export JSON et Export ZIP ouvrent le partage pour enregistrer le fichier (Drive, e-mail, Fichiers...).',
               'Exportez un ZIP complet pour sauvegarder aussi les fichiers de preuves.',
               'Utilisez Réparer les données locales pour nettoyer les plateformes en doublon.',
-              'Une sauvegarde JSON automatique est lancée une fois par jour au démarrage.',
+              'Une sauvegarde JSON automatique est lancée une fois par jour au démarrage (les 7 dernières sont conservées, dans le stockage interne de l\'app).',
             ],
           ),
           _HelpSection(
+            color: sectionColors[section++],
             title: '7. Assistant IA',
             icon: Icons.auto_awesome,
             bullets: const [
@@ -103,6 +124,7 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
           _HelpSection(
+            color: sectionColors[section++],
             title: '8. Partage de lien',
             icon: Icons.share_outlined,
             bullets: const [
@@ -113,6 +135,8 @@ class HelpScreen extends StatelessWidget {
             ],
           ),
           Card(
+            color: palette.tint(palette.orange),
+            elevation: 0,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -160,15 +184,20 @@ class _HelpSection extends StatelessWidget {
     required this.title,
     required this.icon,
     required this.bullets,
+    required this.color,
   });
 
   final String title;
   final IconData icon;
   final List<String> bullets;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Card(
+      color: palette.tint(color),
+      elevation: 0,
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -177,8 +206,12 @@ class _HelpSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon),
-                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: palette.badge(color),
+                  child: Icon(icon, size: 18, color: color),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     title,

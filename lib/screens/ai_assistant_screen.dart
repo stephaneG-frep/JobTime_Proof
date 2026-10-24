@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
+import '../theme/app_palette.dart';
 
 class AiAssistantScreen extends StatefulWidget {
   const AiAssistantScreen({super.key});
@@ -89,6 +90,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           const SizedBox(height: 14),
           if (_result.isNotEmpty)
             Card(
+              color: AppPalette.of(context).tint(AppPalette.of(context).purple),
+              elevation: 0,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(

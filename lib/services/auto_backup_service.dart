@@ -3,6 +3,7 @@ import '../models/job_session.dart';
 import 'file_service.dart';
 
 class AutoBackupService {
+  static const _keptBackups = 7;
   final FileService _fileService = FileService();
 
   bool shouldRunDailyBackup(DateTime? lastAutoBackupAt) {
@@ -20,6 +21,11 @@ class AutoBackupService {
     final path = await _fileService.exportDataToJson(
       sessions: sessions,
       settings: settings,
+      prefix: FileService.autoBackupPrefix,
+    );
+    await _fileService.pruneExports(
+      prefix: FileService.autoBackupPrefix,
+      keep: _keptBackups,
     );
     await onBackupDone(DateTime.now());
     return path;

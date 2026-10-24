@@ -36,10 +36,46 @@ class SettingsProvider extends ChangeNotifier {
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   }
 
-  List<String> get aiProviders => const ['openai', 'gemini', 'mistral'];
+  List<String> get aiProviders => const [
+    'openai',
+    'anthropic',
+    'gemini',
+    'mistral',
+    'xai',
+    'perplexity',
+  ];
+
+  String aiProviderLabel(String provider) {
+    switch (provider) {
+      case 'anthropic':
+        return 'Claude (Anthropic)';
+      case 'gemini':
+        return 'Gemini';
+      case 'mistral':
+        return 'Mistral';
+      case 'xai':
+        return 'Grok (xAI)';
+      case 'perplexity':
+        return 'Perplexity';
+      case 'openai':
+      default:
+        return 'OpenAI';
+    }
+  }
 
   List<String> aiModelsForProvider(String provider) {
     switch (provider) {
+      case 'anthropic':
+        return const [
+          'claude-opus-5-5',
+          'claude-sonnet-5-5',
+          'claude-haiku-5-5',
+        ];
+      case 'xai':
+        return const ['grok-4.7', 'grok-4.5', 'grok-4.3'];
+      case 'perplexity':
+        // Agent API presets (model + web search), from quickest to deepest.
+        return const ['fast', 'low', 'medium', 'high'];
       case 'gemini':
         return const ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
       case 'mistral':
@@ -88,7 +124,9 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<int> cleanCustomPlatforms() async {
     final cleaned = <String>[];
-    final seen = basePlatforms.map((platform) => platform.toLowerCase()).toSet();
+    final seen = basePlatforms
+        .map((platform) => platform.toLowerCase())
+        .toSet();
 
     for (final platform in _settings.customPlatforms) {
       final normalized = platform.trim();
@@ -155,6 +193,16 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> clearAiApiKeyFor(String provider) async {
     _apiKeysByProvider[provider] = '';
     await _secureStorage.clearApiKey(provider);
+    notifyListeners();
+  }
+
+  Future<void> resetAll() async {
+    for (final provider in aiProviders) {
+      await _secureStorage.clearApiKey(provider);
+      _apiKeysByProvider[provider] = '';
+    }
+    _settings = AppSettings.initial();
+    await HiveService.settingsBox.put('main', _settings);
     notifyListeners();
   }
 

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../models/job_proof.dart';
@@ -25,30 +23,12 @@ class SessionProvider extends ChangeNotifier {
   String get selectedPlatform => _selectedPlatform;
   String get selectedActionType => _selectedActionType;
 
-  DateTime? _runningStart;
-  int _elapsedBeforeCurrentRun = 0;
-  DateTime? _lastRunResumedAt;
-  Timer? _timer;
-  bool _isRunning = false;
-  bool _isPaused = false;
-
   String _draftNotes = '';
   bool _draftDidApply = false;
   final List<String> _draftUrls = [];
   final List<bool> _draftUrlDidApply = [];
   String? _pendingSharedUrl;
 
-  DateTime? get runningStart => _runningStart;
-  int get elapsedSeconds {
-    if (!_isRunning || _isPaused || _lastRunResumedAt == null) {
-      return _elapsedBeforeCurrentRun;
-    }
-    final delta = DateTime.now().difference(_lastRunResumedAt!).inSeconds;
-    return _elapsedBeforeCurrentRun + (delta < 0 ? 0 : delta);
-  }
-
-  bool get isRunning => _isRunning;
-  bool get isPaused => _isPaused;
   String get draftNotes => _draftNotes;
   bool get draftDidApply => _draftDidApply;
   List<String> get draftUrls => List.unmodifiable(_draftUrls);
@@ -120,13 +100,6 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void clearDraftUrls() {
-    _draftUrls.clear();
-    _draftUrlDidApply.clear();
-    _persistDraftState();
-    notifyListeners();
-  }
-
   void setPendingSharedUrl(String? url) {
     final trimmed = url?.trim();
     if (trimmed == null || trimmed.isEmpty) return;
@@ -147,96 +120,6 @@ class SessionProvider extends ChangeNotifier {
     _pendingSharedUrl = null;
     _persistDraftState();
     notifyListeners();
-  }
-
-  void startSession() {
-    if (_isRunning && !_isPaused) return;
-
-    if (_runningStart == null) {
-      _runningStart = DateTime.now();
-      _elapsedBeforeCurrentRun = 0;
-    }
-
-    _isRunning = true;
-    _isPaused = false;
-    _lastRunResumedAt = DateTime.now();
-    _persistDraftState();
-
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      // Tick only drives UI refresh; elapsed time is based on real timestamps.
-      notifyListeners();
-    });
-    notifyListeners();
-  }
-
-  void pauseSession() {
-    if (!_isRunning || _isPaused) return;
-    _timer?.cancel();
-    _elapsedBeforeCurrentRun = elapsedSeconds;
-    _lastRunResumedAt = null;
-    _isPaused = true;
-    _persistDraftState();
-    notifyListeners();
-  }
-
-  Future<JobSession?> endSession() async {
-    if (_runningStart == null || !_isRunning) return null;
-    _timer?.cancel();
-
-    final now = DateTime.now();
-    final sessionId = now.microsecondsSinceEpoch.toString();
-    _syncDraftUrlFlags();
-    final finalizedProofs = _draftUrls
-        .asMap()
-        .entries
-        .map(
-          (entry) => JobProof(
-            id: '${now.microsecondsSinceEpoch}_${entry.value.hashCode}',
-            sessionId: sessionId,
-            title: 'Lien session',
-            type: JobProofType.url,
-            url: entry.value,
-            didApply: _draftUrlAppliedAt(entry.key),
-            createdAt: now,
-          ),
-        )
-        .toList();
-    final didApply =
-        _draftDidApply ||
-        finalizedProofs.any((proof) => proof.didApply) ||
-        _selectedActionType.toLowerCase().contains('candidature');
-    final session = JobSession(
-      id: sessionId,
-      platform: _selectedPlatform,
-      actionType: _selectedActionType,
-      startTime: _runningStart!,
-      endTime: now,
-      durationSeconds: elapsedSeconds,
-      notes: _draftNotes.trim(),
-      proofs: finalizedProofs,
-      didApply: didApply,
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    await HiveService.sessionsBox.put(session.id, session);
-    _sessions.insert(0, session);
-
-    _runningStart = null;
-    _elapsedBeforeCurrentRun = 0;
-    _lastRunResumedAt = null;
-    _isRunning = false;
-    _isPaused = false;
-    _draftNotes = '';
-    _draftDidApply = false;
-    _draftUrls.clear();
-    _draftUrlDidApply.clear();
-    _pendingSharedUrl = null;
-    await HiveService.runtimeBox.delete(_draftStateKey);
-
-    notifyListeners();
-    return session;
   }
 
   Future<JobSession> saveEstimatedSession({required int minutes}) async {
@@ -322,35 +205,23 @@ class SessionProvider extends ChangeNotifier {
               proof.id == proofId ? proof.copyWith(didApply: didApply) : proof,
         )
         .toList();
+    final anyProofApplied = updatedProofs.any((proof) => proof.didApply);
+    final hadAppliedProof = session.proofs.any((proof) => proof.didApply);
+    // Unchecking the last applied proof falls back to the action type, so the
+    // session does not stay marked as applied because of a removed check.
+    final didApplySession = anyProofApplied
+        ? true
+        : hadAppliedProof
+        ? session.actionType.toLowerCase().contains('candidature')
+        : session.didApply;
     final updated = session.copyWith(
       proofs: updatedProofs,
-      didApply:
-          session.didApply || updatedProofs.any((proof) => proof.didApply),
+      didApply: didApplySession,
     );
 
     _sessions[index] = updated;
     await HiveService.sessionsBox.put(updated.id, updated);
     notifyListeners();
-  }
-
-  Future<bool> addUrlProofToLatestSession({
-    required String url,
-    String title = 'Annonce partagée',
-    String? description,
-  }) async {
-    if (_sessions.isEmpty) return false;
-    final latest = _sessions.first;
-    final proof = JobProof(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      sessionId: latest.id,
-      title: title,
-      type: JobProofType.url,
-      url: url.trim(),
-      description: description,
-      createdAt: DateTime.now(),
-    );
-    await addProof(latest.id, proof);
-    return true;
   }
 
   Future<void> updateSession(JobSession updated) async {
@@ -369,17 +240,26 @@ class SessionProvider extends ChangeNotifier {
 
   Future<void> replaceAllSessions(List<JobSession> imported) async {
     final box = HiveService.sessionsBox;
-    await box.clear();
-    for (final s in imported) {
-      await box.put(s.id, s);
-    }
+    // Write the imported sessions before removing the old ones, so a failure
+    // midway never leaves the box empty.
+    final importedIds = imported.map((s) => s.id).toSet();
+    await box.putAll({for (final s in imported) s.id: s});
+    await box.deleteAll(
+      box.keys.where((key) => !importedIds.contains(key)).toList(),
+    );
     _sessions = imported..sort((a, b) => b.startTime.compareTo(a.startTime));
     notifyListeners();
   }
 
   Future<void> clearAll() async {
     await HiveService.sessionsBox.clear();
+    await HiveService.runtimeBox.clear();
     _sessions = [];
+    _draftNotes = '';
+    _draftDidApply = false;
+    _draftUrls.clear();
+    _draftUrlDidApply.clear();
+    _pendingSharedUrl = null;
     notifyListeners();
   }
 
@@ -442,17 +322,16 @@ class SessionProvider extends ChangeNotifier {
   }
 
   List<JobSession> sessionsForPeriod(DateTime from, DateTime to) {
-    return _sessions.where((s) {
-      final startsAfterOrAt = !s.startTime.isBefore(from);
-      final endsBeforeOrAt = !s.endTime.isAfter(to);
-      return startsAfterOrAt && endsBeforeOrAt;
-    }).toList();
+    return _sessions.where((s) => isInDayRange(s, from, to)).toList();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  /// [from] and [to] are calendar days (as returned by a date range picker,
+  /// at midnight): the whole [to] day is included.
+  static bool isInDayRange(JobSession session, DateTime from, DateTime to) {
+    final start = DateTime(from.year, from.month, from.day);
+    final endExclusive = DateTime(to.year, to.month, to.day + 1);
+    return !session.startTime.isBefore(start) &&
+        session.startTime.isBefore(endExclusive);
   }
 
   void _persistDraftState() {
@@ -460,11 +339,6 @@ class SessionProvider extends ChangeNotifier {
     final map = <String, dynamic>{
       'selectedPlatform': _selectedPlatform,
       'selectedActionType': _selectedActionType,
-      'runningStart': _runningStart?.toIso8601String(),
-      'elapsedBeforeCurrentRun': _elapsedBeforeCurrentRun,
-      'lastRunResumedAt': _lastRunResumedAt?.toIso8601String(),
-      'isRunning': _isRunning,
-      'isPaused': _isPaused,
       'draftNotes': _draftNotes,
       'draftDidApply': _draftDidApply,
       'draftUrls': _draftUrls,
@@ -482,13 +356,6 @@ class SessionProvider extends ChangeNotifier {
         (raw['selectedPlatform'] as String?) ?? _selectedPlatform;
     _selectedActionType =
         (raw['selectedActionType'] as String?) ?? _selectedActionType;
-    _runningStart = DateTime.tryParse((raw['runningStart'] as String?) ?? '');
-    _elapsedBeforeCurrentRun = (raw['elapsedBeforeCurrentRun'] as int?) ?? 0;
-    _lastRunResumedAt = DateTime.tryParse(
-      (raw['lastRunResumedAt'] as String?) ?? '',
-    );
-    _isRunning = (raw['isRunning'] as bool?) ?? false;
-    _isPaused = (raw['isPaused'] as bool?) ?? false;
     _draftNotes = (raw['draftNotes'] as String?) ?? '';
     _draftDidApply =
         (raw['draftDidApply'] as bool?) ??
@@ -507,13 +374,6 @@ class SessionProvider extends ChangeNotifier {
       );
     _syncDraftUrlFlags();
     _pendingSharedUrl = (raw['pendingSharedUrl'] as String?);
-
-    if (_isRunning && !_isPaused) {
-      _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        notifyListeners();
-      });
-    }
   }
 
   bool _draftUrlAppliedAt(int index) {

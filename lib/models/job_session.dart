@@ -103,9 +103,9 @@ class JobSessionAdapter extends TypeAdapter<JobSession> {
 
   @override
   JobSession read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
-      for (int i = 0; i < reader.readByte(); i++)
-        reader.readByte(): reader.read(),
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     final now = DateTime.now();
     final actionType = (fields[2] as String?) ?? '';

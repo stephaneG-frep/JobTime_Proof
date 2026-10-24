@@ -33,8 +33,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final actionOk = _action == 'Tous' || s.actionType == _action;
       final dateOk =
           _range == null ||
-          (!s.startTime.isBefore(_range!.start) &&
-              !s.endTime.isAfter(_range!.end));
+          SessionProvider.isInDayRange(s, _range!.start, _range!.end);
       final keywordOk =
           _keyword.trim().isEmpty ||
           s.notes.toLowerCase().contains(_keyword.toLowerCase()) ||

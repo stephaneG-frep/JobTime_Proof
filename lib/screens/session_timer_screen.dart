@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
+import '../theme/app_palette.dart';
 import '../widgets/quick_start_card.dart';
 
 class SessionTimerScreen extends StatefulWidget {
@@ -35,6 +36,13 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
     'Apec': Uri.parse('apec://'),
     'Welcome to the Jungle': Uri.parse('welcometothejungle://'),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    // The screen is rebuilt on each tab switch: restore the persisted draft.
+    _notesController.text = context.read<SessionProvider>().draftNotes;
+  }
 
   String _formatMinutes(int minutes) {
     final hours = minutes ~/ 60;
@@ -80,6 +88,7 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
   Widget build(BuildContext context) {
     final sessionProvider = context.watch<SessionProvider>();
     final settingsProvider = context.watch<SettingsProvider>();
+    final palette = AppPalette.of(context);
     final platforms = settingsProvider.allPlatforms;
     final selectedPlatform = _safeDropdownValue(
       sessionProvider.selectedPlatform,
@@ -121,7 +130,8 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
         const SizedBox(height: 16),
         if (sessionProvider.pendingSharedUrl != null)
           Card(
-            color: Theme.of(context).colorScheme.secondaryContainer,
+            color: palette.tint(palette.teal),
+            elevation: 0,
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -170,6 +180,8 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
             ),
           ),
         Card(
+          color: palette.tint(palette.purple),
+          elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -338,6 +350,8 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
         ),
         const SizedBox(height: 12),
         Card(
+          color: palette.tint(palette.green),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -406,6 +420,8 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
         ),
         const SizedBox(height: 16),
         Card(
+          color: palette.tint(palette.blue),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -417,7 +433,9 @@ class _SessionTimerScreenState extends State<SessionTimerScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _formatMinutes(_estimatedMinutes),
-                  style: Theme.of(context).textTheme.displaySmall,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.displaySmall?.copyWith(color: palette.blue),
                 ),
                 const SizedBox(height: 12),
                 Row(

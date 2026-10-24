@@ -10,6 +10,7 @@ import '../models/job_session.dart';
 import '../providers/session_provider.dart';
 import '../services/file_service.dart';
 import '../widgets/proof_card.dart';
+import '../theme/app_palette.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   const SessionDetailScreen({super.key, required this.sessionId});
@@ -48,8 +49,30 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline),
+            tooltip: 'Supprimer la session',
             onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Supprimer la session ?'),
+                  content: const Text(
+                    'La session et ses fichiers de preuve seront définitivement supprimés.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Annuler'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Supprimer'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true) return;
               await provider.deleteSession(activeSession.id);
+              await _fileService.deleteProofFiles(activeSession.proofs);
               if (context.mounted) Navigator.pop(context);
             },
           ),
@@ -60,7 +83,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         children: [
           if (provider.pendingSharedUrl != null)
             Card(
-              color: Theme.of(context).colorScheme.secondaryContainer,
+              color: AppPalette.of(context).tint(AppPalette.of(context).teal),
+              elevation: 0,
               margin: const EdgeInsets.only(bottom: 12),
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -112,6 +136,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           ),
           const SizedBox(height: 10),
           Card(
+            color: AppPalette.of(context).tint(AppPalette.of(context).green),
+            elevation: 0,
             child: Padding(
               padding: const EdgeInsets.all(10),
               child: Column(

@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -9,12 +11,70 @@ import '../models/job_proof.dart';
 import '../models/job_session.dart';
 
 class PdfReportService {
+  static const _thumbnailWidth = 480;
+
+  Future<pw.ThemeData> _theme() async {
+    final base = await rootBundle.load('assets/fonts/DejaVuSans.ttf');
+    final bold = await rootBundle.load('assets/fonts/DejaVuSans-Bold.ttf');
+    return pw.ThemeData.withFont(
+      base: pw.Font.ttf(base),
+      bold: pw.Font.ttf(bold),
+    );
+  }
+
+  /// Image proofs downscaled once, keyed by proof id (null: file unreadable).
+  Future<Map<String, pw.MemoryImage?>> _loadThumbnails(
+    List<JobSession> sessions,
+  ) async {
+    final thumbnails = <String, pw.MemoryImage?>{};
+    for (final session in sessions) {
+      for (final proof in session.proofs) {
+        final path = proof.filePath?.trim();
+        if (proof.type != JobProofType.image || path == null || path.isEmpty) {
+          continue;
+        }
+        thumbnails[proof.id] = await _loadThumbnail(path);
+      }
+    }
+    return thumbnails;
+  }
+
+  Future<pw.MemoryImage?> _loadThumbnail(String path) async {
+    final file = File(path);
+    if (!await file.exists()) return null;
+    final bytes = await file.readAsBytes();
+    try {
+      final codec = await ui.instantiateImageCodec(
+        bytes,
+        targetWidth: _thumbnailWidth,
+        allowUpscaling: false,
+      );
+      final frame = await codec.getNextFrame();
+      final data = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+      frame.image.dispose();
+      if (data != null) return pw.MemoryImage(data.buffer.asUint8List());
+    } catch (_) {
+      // Fall back to the original bytes.
+    }
+    return pw.MemoryImage(bytes);
+  }
+
   Future<void> exportReport({
     required DateTime from,
     required DateTime to,
     required List<JobSession> sessions,
   }) async {
-    final pdf = pw.Document();
+    final bytes = await buildReport(from: from, to: to, sessions: sessions);
+    await Printing.layoutPdf(onLayout: (_) async => bytes);
+  }
+
+  Future<Uint8List> buildReport({
+    required DateTime from,
+    required DateTime to,
+    required List<JobSession> sessions,
+  }) async {
+    final pdf = pw.Document(theme: await _theme());
+    final thumbnails = await _loadThumbnails(sessions);
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'fr_FR');
     final shortDateFormat = DateFormat('dd/MM/yyyy', 'fr_FR');
 
@@ -206,7 +266,8 @@ class PdfReportService {
                 children: [
                   if (s.notes.trim().isNotEmpty)
                     pw.Text('Notes: ${s.notes.trim()}'),
-                  if (s.proofs.isNotEmpty) ..._buildProofWidgets(s.proofs),
+                  if (s.proofs.isNotEmpty)
+                    ..._buildProofWidgets(s.proofs, thumbnails),
                 ],
               ),
             ),
@@ -215,7 +276,7 @@ class PdfReportService {
       ),
     );
 
-    await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+    return pdf.save();
   }
 
   Future<void> exportPresentationReport({
@@ -223,7 +284,20 @@ class PdfReportService {
     required DateTime to,
     required List<JobSession> sessions,
   }) async {
-    final pdf = pw.Document();
+    final bytes = await buildPresentationReport(
+      from: from,
+      to: to,
+      sessions: sessions,
+    );
+    await Printing.layoutPdf(onLayout: (_) async => bytes);
+  }
+
+  Future<Uint8List> buildPresentationReport({
+    required DateTime from,
+    required DateTime to,
+    required List<JobSession> sessions,
+  }) async {
+    final pdf = pw.Document(theme: await _theme());
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'fr_FR');
     final shortDateFormat = DateFormat('dd/MM/yyyy', 'fr_FR');
     final totalSeconds = sessions.fold<int>(
@@ -296,10 +370,13 @@ class PdfReportService {
       ),
     );
 
-    await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+    return pdf.save();
   }
 
-  List<pw.Widget> _buildProofWidgets(List<JobProof> proofs) {
+  List<pw.Widget> _buildProofWidgets(
+    List<JobProof> proofs,
+    Map<String, pw.MemoryImage?> thumbnails,
+  ) {
     final widgets = <pw.Widget>[
       pw.Text(
         'Preuves détaillées',
@@ -337,7 +414,7 @@ class PdfReportService {
                   'Description: ${proof.description!.trim()}',
                   style: const pw.TextStyle(fontSize: 9),
                 ),
-              ..._proofContentWidgets(proof),
+              ..._proofContentWidgets(proof, thumbnails),
             ],
           ),
         ),
@@ -360,7 +437,10 @@ class PdfReportService {
     }
   }
 
-  List<pw.Widget> _proofContentWidgets(JobProof proof) {
+  List<pw.Widget> _proofContentWidgets(
+    JobProof proof,
+    Map<String, pw.MemoryImage?> thumbnails,
+  ) {
     switch (proof.type) {
       case JobProofType.image:
         final path = proof.filePath?.trim();
@@ -372,17 +452,15 @@ class PdfReportService {
             ),
           ];
         }
-        final file = File(path);
-        if (!file.existsSync()) {
+        final image = thumbnails[proof.id];
+        if (image == null) {
           return [
             pw.Text(
-              'Image introuvable: $path',
+              'Image introuvable',
               style: const pw.TextStyle(fontSize: 9),
             ),
           ];
         }
-        final bytes = file.readAsBytesSync();
-        final image = pw.MemoryImage(bytes);
         return [
           pw.SizedBox(height: 4),
           pw.Container(
@@ -442,6 +520,7 @@ class PdfReportService {
                 child: pw.BarcodeWidget(
                   barcode: pw.Barcode.qrCode(),
                   data: url,
+                  drawText: false,
                 ),
               ),
               pw.SizedBox(width: 8),

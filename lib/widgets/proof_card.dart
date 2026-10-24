@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/job_proof.dart';
+import '../theme/app_palette.dart';
 
 class ProofCard extends StatelessWidget {
   const ProofCard({
@@ -30,15 +31,36 @@ class ProofCard extends StatelessWidget {
     }
   }
 
+  Color _color(AppPalette palette) {
+    if (proof.didApply) return palette.green;
+    switch (proof.type) {
+      case JobProofType.image:
+        return palette.purple;
+      case JobProofType.pdf:
+        return palette.coral;
+      case JobProofType.url:
+        return palette.blue;
+      case JobProofType.note:
+        return palette.teal;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final accent = _color(palette);
     return Card(
+      color: palette.tint(accent),
+      elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(
-          proof.didApply ? Icons.check_circle : _icon(proof.type),
-          color: proof.didApply ? Theme.of(context).colorScheme.primary : null,
+        leading: CircleAvatar(
+          backgroundColor: palette.badge(accent),
+          child: Icon(
+            proof.didApply ? Icons.check_circle : _icon(proof.type),
+            color: accent,
+          ),
         ),
         title: Text(proof.title),
         subtitle: Text(

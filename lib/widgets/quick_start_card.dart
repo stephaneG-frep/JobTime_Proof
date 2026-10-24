@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_palette.dart';
+
 class QuickStartCard extends StatelessWidget {
   const QuickStartCard({
     super.key,
@@ -14,8 +16,10 @@ class QuickStartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final palette = AppPalette.of(context);
     return Card(
+      color: palette.tint(palette.orange),
+      elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -25,12 +29,12 @@ class QuickStartCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: scheme.primaryContainer.withValues(alpha: 0.55),
+                color: palette.badge(palette.orange),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.rocket_launch, color: scheme.primary),
+                  Icon(Icons.rocket_launch, color: palette.orange),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

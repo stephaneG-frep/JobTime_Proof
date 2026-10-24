@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
+import '../theme/app_palette.dart';
 import '../widgets/stat_card.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -18,6 +19,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final sessions = context.watch<SessionProvider>();
     final settings = context.watch<SettingsProvider>();
+    final palette = AppPalette.of(context);
 
     final today = sessions.totalSecondsToday();
     final week = sessions.totalSecondsWeek();
@@ -46,29 +48,32 @@ class DashboardScreen extends StatelessWidget {
               title: 'Aujourd\'hui',
               value: _hms(today),
               icon: Icons.today,
+              color: palette.blue,
             ),
             StatCard(
               title: 'Semaine',
               value: _hms(week),
               icon: Icons.date_range,
+              color: palette.teal,
             ),
             StatCard(
               title: 'Sessions',
               value: '${sessions.sessions.length}',
               icon: Icons.timer,
+              color: palette.purple,
             ),
             StatCard(
               title: 'Sans preuve',
               value: '$missingProofs',
               icon: Icons.warning_amber_outlined,
-              color: missingProofs == 0
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.error,
+              color: missingProofs == 0 ? palette.green : palette.orange,
             ),
           ],
         ),
         const SizedBox(height: 16),
         Card(
+          color: palette.tint(palette.green),
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -77,13 +82,22 @@ class DashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Objectif hebdomadaire: ${settings.settings.weeklyGoalHours} h',
+                Row(
+                  children: [
+                    Icon(Icons.flag_outlined, color: palette.green),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Objectif hebdomadaire: ${settings.settings.weeklyGoalHours} h',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 LinearProgressIndicator(
                   value: progress,
                   minHeight: 10,
+                  color: palette.green,
+                  backgroundColor: palette.badge(palette.green),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 const SizedBox(height: 8),

@@ -6,6 +6,7 @@ import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/app_settings.dart';
 import '../models/job_proof.dart';
@@ -66,14 +67,19 @@ class FileService {
     return result?.files.single.path;
   }
 
+  static const exportPrefix = 'jobtime_proof_export';
+  static const autoBackupPrefix = 'jobtime_proof_autobackup';
+  static const zipPrefix = 'jobtime_proof_complete';
+
   Future<String> exportDataToJson({
     required List<JobSession> sessions,
     required AppSettings settings,
+    String prefix = exportPrefix,
   }) async {
     final directory = await getApplicationDocumentsDirectory();
     final now = DateTime.now();
     final file = File(
-      '${directory.path}/jobtime_proof_export_${now.millisecondsSinceEpoch}.json',
+      '${directory.path}/${prefix}_${now.millisecondsSinceEpoch}.json',
     );
 
     final payload = {
@@ -94,12 +100,15 @@ class FileService {
   }) async {
     final directory = await getApplicationDocumentsDirectory();
     final now = DateTime.now();
-    final jsonPath = await exportDataToJson(sessions: sessions, settings: settings);
+    final jsonPath = await exportDataToJson(
+      sessions: sessions,
+      settings: settings,
+    );
     final zipPath =
-        '${directory.path}/jobtime_proof_complete_${now.millisecondsSinceEpoch}.zip';
+        '${directory.path}/${zipPrefix}_${now.millisecondsSinceEpoch}.zip';
     final encoder = ZipFileEncoder()..create(zipPath);
 
-    encoder.addFile(File(jsonPath), 'jobtime_proof_export.json');
+    await encoder.addFile(File(jsonPath), 'jobtime_proof_export.json');
     for (final session in sessions) {
       for (final proof in session.proofs) {
         final path = proof.filePath?.trim();
@@ -112,48 +121,83 @@ class FileService {
         final extension = file.uri.pathSegments.last.contains('.')
             ? '.${file.uri.pathSegments.last.split('.').last}'
             : '';
-        encoder.addFile(
+        await encoder.addFile(
           file,
           'proofs/${session.id}/${proof.id}_${safeName.isEmpty ? 'preuve' : safeName}$extension',
         );
       }
     }
-    encoder.close();
+    await encoder.close();
+    await File(jsonPath).delete();
     return zipPath;
+  }
+
+  /// Opens the system share sheet so the user can save or send an export
+  /// (files in the app documents directory are not reachable otherwise).
+  Future<void> shareFile(String path, {String? subject}) async {
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(path)], subject: subject),
+    );
+  }
+
+  /// Keeps only the [keep] most recent exports whose name starts with [prefix].
+  Future<void> pruneExports({required String prefix, required int keep}) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final files =
+        directory
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.uri.pathSegments.last.startsWith('${prefix}_'))
+            .toList()
+          ..sort((a, b) => b.path.compareTo(a.path));
+    for (final file in files.skip(keep)) {
+      await file.delete();
+    }
+  }
+
+  /// Deletes the stored files of [proofs], limited to the app proofs directory
+  /// (imported proofs may reference paths the app does not own).
+  Future<void> deleteProofFiles(Iterable<JobProof> proofs) async {
+    final documentsDir = await getApplicationDocumentsDirectory();
+    final proofsDirPath = '${documentsDir.path}/proofs/';
+    for (final proof in proofs) {
+      final path = proof.filePath?.trim();
+      if (path == null || !path.startsWith(proofsDirPath)) continue;
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    }
+  }
+
+  /// Deletes every proof file and every JSON/ZIP export created by the app.
+  Future<void> deleteAllLocalFiles() async {
+    final documentsDir = await getApplicationDocumentsDirectory();
+    final proofsDir = Directory('${documentsDir.path}/proofs');
+    if (await proofsDir.exists()) await proofsDir.delete(recursive: true);
+    for (final prefix in [exportPrefix, autoBackupPrefix, zipPrefix]) {
+      await pruneExports(prefix: prefix, keep: 0);
+    }
   }
 
   Future<(AppSettings, List<JobSession>)> importDataFromJson(
     String path,
   ) async {
-    final file = File(path);
-    final content = await file.readAsString();
-    final map = jsonDecode(content) as Map<String, dynamic>;
+    final content = await File(path).readAsString();
+    try {
+      final map = jsonDecode(content) as Map<String, dynamic>;
 
-    final settings = AppSettings.fromJson(
-      Map<String, dynamic>.from(map['settings'] as Map),
-    );
-    final sessions = (map['sessions'] as List<dynamic>)
-        .map((e) => JobSession.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+      final settings = AppSettings.fromJson(
+        Map<String, dynamic>.from(map['settings'] as Map),
+      );
+      final sessions = (map['sessions'] as List<dynamic>)
+          .map((e) => JobSession.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
 
-    return (settings, sessions);
-  }
-
-  JobProof buildUrlProof({
-    required String sessionId,
-    required String title,
-    required String url,
-    String? description,
-  }) {
-    return JobProof(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      sessionId: sessionId,
-      title: title,
-      type: JobProofType.url,
-      url: url,
-      description: description,
-      createdAt: DateTime.now(),
-    );
+      return (settings, sessions);
+    } catch (_) {
+      throw const FormatException(
+        'Fichier invalide : ce n\'est pas un export JobTime Proof.',
+      );
+    }
   }
 
   Future<String> _persistPickedFile({

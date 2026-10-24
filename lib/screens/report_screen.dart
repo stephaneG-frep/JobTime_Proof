@@ -7,6 +7,7 @@ import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/file_service.dart';
 import '../services/pdf_report_service.dart';
+import '../theme/app_palette.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -27,10 +28,25 @@ class _ReportScreenState extends State<ReportScreen> {
     return '${hours}h ${minutes.toString().padLeft(2, '0')}';
   }
 
+  Widget _statChip(
+    AppPalette palette,
+    Color color,
+    IconData icon,
+    String label,
+  ) {
+    return Chip(
+      avatar: Icon(icon, size: 18, color: color),
+      label: Text(label),
+      backgroundColor: palette.tint(color),
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SessionProvider>();
     final settings = context.watch<SettingsProvider>();
+    final palette = AppPalette.of(context);
     final from = _range?.start;
     final to = _range?.end;
     final sessions = (from != null && to != null)
@@ -45,7 +61,9 @@ class _ReportScreenState extends State<ReportScreen> {
       0,
       (sum, s) => sum + s.durationSeconds,
     );
-    final applicationsCount = sessions.where((s) => s.didApply).length;
+    final applicationsCount = sessions
+        .where((s) => s.didApply || s.proofs.any((p) => p.didApply))
+        .length;
     final missingProofsCount = sessions.where((s) => !s.hasProofs).length;
 
     return ListView(
@@ -54,6 +72,8 @@ class _ReportScreenState extends State<ReportScreen> {
         Text('Rapport PDF', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 12),
         Card(
+          color: palette.tint(palette.blue),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -86,26 +106,31 @@ class _ReportScreenState extends State<ReportScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      Chip(
-                        avatar: const Icon(Icons.timer_outlined, size: 18),
-                        label: Text(
-                          'Temps total: ${_formatDuration(totalSeconds)}',
-                        ),
+                      _statChip(
+                        palette,
+                        palette.blue,
+                        Icons.timer_outlined,
+                        'Temps total: ${_formatDuration(totalSeconds)}',
                       ),
-                      Chip(
-                        avatar: const Icon(Icons.history, size: 18),
-                        label: Text('Sessions: ${sessions.length}'),
+                      _statChip(
+                        palette,
+                        palette.purple,
+                        Icons.history,
+                        'Sessions: ${sessions.length}',
                       ),
-                      Chip(
-                        avatar: const Icon(Icons.send_outlined, size: 18),
-                        label: Text('Candidatures: $applicationsCount'),
+                      _statChip(
+                        palette,
+                        palette.green,
+                        Icons.send_outlined,
+                        'Candidatures: $applicationsCount',
                       ),
-                      Chip(
-                        avatar: const Icon(
-                          Icons.warning_amber_outlined,
-                          size: 18,
-                        ),
-                        label: Text('Sans preuve: $missingProofsCount'),
+                      _statChip(
+                        palette,
+                        missingProofsCount == 0
+                            ? palette.green
+                            : palette.orange,
+                        Icons.warning_amber_outlined,
+                        'Sans preuve: $missingProofsCount',
                       ),
                     ],
                   ),
@@ -180,11 +205,10 @@ class _ReportScreenState extends State<ReportScreen> {
                             sessions: sessions,
                             settings: settings.settings,
                           );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Export ZIP créé: $path')),
-                            );
-                          }
+                          await _fileService.shareFile(
+                            path,
+                            subject: 'Export complet JobTime Proof',
+                          );
                         },
                   icon: const Icon(Icons.folder_zip_outlined),
                   label: const Text('Exporter ZIP complet'),

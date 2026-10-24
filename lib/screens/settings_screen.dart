@@ -5,6 +5,7 @@ import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
 import '../services/file_service.dart';
+import '../theme/app_palette.dart';
 import 'ai_assistant_screen.dart';
 import 'help_screen.dart';
 
@@ -29,9 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final settingsProvider = context.watch<SettingsProvider>();
     final sessionProvider = context.watch<SessionProvider>();
     if (!_otherTargetsLoaded) {
-      _otherWebCtrl.text = settingsProvider.settings.otherPlatformWebUrl;
-      _otherAppCtrl.text = settingsProvider.settings.otherPlatformAppScheme;
-      _apiKeyCtrl.text = settingsProvider.currentAiApiKey;
+      _syncControllers(settingsProvider);
       _otherTargetsLoaded = true;
     }
 
@@ -51,30 +50,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 10),
         Card(
+          color: AppPalette.of(context).tint(AppPalette.of(context).purple),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Paramètres IA'),
+                _SectionTitle(
+                  icon: Icons.auto_awesome,
+                  color: AppPalette.of(context).purple,
+                  title: 'Paramètres IA',
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _apiKeyCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Clé API OpenAI',
-                    hintText: 'sk-...',
+                  decoration: InputDecoration(
+                    labelText:
+                        'Clé API ${settingsProvider.aiProviderLabel(settingsProvider.settings.aiProvider)}',
                   ),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  initialValue: settingsProvider.settings.aiProvider,
+                  key: ValueKey(
+                    'provider-${settingsProvider.settings.aiProvider}',
+                  ),
+                  initialValue:
+                      settingsProvider.aiProviders.contains(
+                        settingsProvider.settings.aiProvider,
+                      )
+                      ? settingsProvider.settings.aiProvider
+                      : settingsProvider.aiProviders.first,
                   decoration: const InputDecoration(
                     labelText: 'Provider IA',
                     border: OutlineInputBorder(),
                   ),
                   items: settingsProvider.aiProviders
-                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                      .map(
+                        (p) => DropdownMenuItem(
+                          value: p,
+                          child: Text(settingsProvider.aiProviderLabel(p)),
+                        ),
+                      )
                       .toList(),
                   onChanged: (provider) async {
                     if (provider == null) return;
@@ -93,7 +111,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  initialValue: settingsProvider.settings.aiModel,
+                  // Recreate the field when the provider changes: its model
+                  // list changes and the previous value would not be in it.
+                  key: ValueKey(
+                    'model-${settingsProvider.settings.aiProvider}',
+                  ),
+                  initialValue: _modelValue(settingsProvider),
                   decoration: const InputDecoration(
                     labelText: 'Modèle IA',
                     border: OutlineInputBorder(),
@@ -197,11 +220,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 10),
         Card(
+          color: AppPalette.of(context).tint(AppPalette.of(context).coral),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _SectionTitle(
+                  icon: Icons.palette_outlined,
+                  color: AppPalette.of(context).coral,
+                  title: 'Apparence et objectif',
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Thème sombre'),
@@ -229,12 +259,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 10),
         Card(
+          color: AppPalette.of(context).tint(AppPalette.of(context).teal),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Plateforme "Autre" (personnalisée)'),
+                _SectionTitle(
+                  icon: Icons.open_in_new,
+                  color: AppPalette.of(context).teal,
+                  title: 'Plateforme "Autre" (personnalisée)',
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _otherWebCtrl,
@@ -272,12 +308,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 10),
         Card(
+          color: AppPalette.of(context).tint(AppPalette.of(context).blue),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Plateformes personnalisées'),
+                _SectionTitle(
+                  icon: Icons.apps,
+                  color: AppPalette.of(context).blue,
+                  title: 'Plateformes personnalisées',
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -337,12 +379,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 10),
         Card(
+          color: AppPalette.of(context).tint(AppPalette.of(context).orange),
+          elevation: 0,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Import, export et données'),
+                _SectionTitle(
+                  icon: Icons.storage,
+                  color: AppPalette.of(context).orange,
+                  title: 'Import, export et données',
+                ),
                 const SizedBox(height: 10),
                 GridView.count(
                   crossAxisCount: 2,
@@ -354,6 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     _SettingsActionCard(
                       icon: Icons.upload_file,
+                      color: AppPalette.of(context).blue,
                       title: 'Export JSON',
                       subtitle: 'Données seules',
                       onTap: () async {
@@ -361,15 +410,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           sessions: sessionProvider.sessions,
                           settings: settingsProvider.settings,
                         );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Export JSON créé: $path')),
-                          );
-                        }
+                        await _fileService.shareFile(
+                          path,
+                          subject: 'Export JobTime Proof',
+                        );
                       },
                     ),
                     _SettingsActionCard(
                       icon: Icons.folder_zip_outlined,
+                      color: AppPalette.of(context).purple,
                       title: 'Export ZIP',
                       subtitle: 'JSON + preuves',
                       onTap: () async {
@@ -377,30 +426,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           sessions: sessionProvider.sessions,
                           settings: settingsProvider.settings,
                         );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Export ZIP complet créé: $path'),
-                            ),
-                          );
-                        }
+                        await _fileService.shareFile(
+                          path,
+                          subject: 'Export complet JobTime Proof',
+                        );
                       },
                     ),
                     _SettingsActionCard(
                       icon: Icons.download_for_offline,
+                      color: AppPalette.of(context).teal,
                       title: 'Import JSON',
                       subtitle: 'Restaurer',
                       onTap: () async {
+                        final messenger = ScaffoldMessenger.of(context);
                         final path = await _fileService.pickJson();
                         if (path == null) return;
-                        final (settings, sessions) = await _fileService
-                            .importDataFromJson(path);
-                        await settingsProvider.replaceFromImport(settings);
-                        await sessionProvider.replaceAllSessions(sessions);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                        try {
+                          final (settings, sessions) = await _fileService
+                              .importDataFromJson(path);
+                          if (!context.mounted) return;
+                          final confirmed = await _confirm(
+                            context,
+                            title: 'Remplacer les données ?',
+                            message:
+                                'Les ${sessionProvider.sessions.length} session(s) actuelle(s) seront remplacées par les ${sessions.length} session(s) du fichier.',
+                          );
+                          if (!confirmed) return;
+                          await settingsProvider.replaceFromImport(settings);
+                          await sessionProvider.replaceAllSessions(sessions);
+                          _syncControllers(settingsProvider);
+                          messenger.showSnackBar(
                             const SnackBar(
                               content: Text('Import JSON terminé.'),
+                            ),
+                          );
+                        } catch (e) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                e is FormatException
+                                    ? e.message
+                                    : 'Import impossible : $e',
+                              ),
                             ),
                           );
                         }
@@ -408,31 +475,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     _SettingsActionCard(
                       icon: Icons.delete_forever,
+                      color: AppPalette.of(context).coral,
                       title: 'Supprimer',
                       subtitle: 'Tout effacer',
-                      destructive: true,
                       onTap: () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Suppression complète'),
-                            content: const Text(
-                              'Confirmez la suppression de toutes les données locales.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Annuler'),
-                              ),
-                              FilledButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Confirmer'),
-                              ),
-                            ],
-                          ),
+                        final confirmed = await _confirm(
+                          context,
+                          title: 'Suppression complète',
+                          message:
+                              'Toutes les sessions, preuves (fichiers compris), exports, réglages et clés API seront définitivement supprimés.',
                         );
-                        if (confirmed == true) {
+                        if (confirmed) {
                           await sessionProvider.clearAll();
+                          await settingsProvider.resetAll();
+                          await _fileService.deleteAllLocalFiles();
+                          _syncControllers(settingsProvider);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -453,6 +510,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _syncControllers(SettingsProvider settingsProvider) {
+    _otherWebCtrl.text = settingsProvider.settings.otherPlatformWebUrl;
+    _otherAppCtrl.text = settingsProvider.settings.otherPlatformAppScheme;
+    _apiKeyCtrl.text = settingsProvider.currentAiApiKey;
+  }
+
+  // An imported or legacy model may not be offered for the current provider.
+  String _modelValue(SettingsProvider settingsProvider) {
+    final models = settingsProvider.aiModelsForProvider(
+      settingsProvider.settings.aiProvider,
+    );
+    final current = settingsProvider.settings.aiModel;
+    return models.contains(current) ? current : models.first;
+  }
+
+  Future<bool> _confirm(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
   @override
   void dispose() {
     _platformCtrl.dispose();
@@ -463,27 +560,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({
+    required this.icon,
+    required this.color,
+    required this.title,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: AppPalette.of(context).badge(color),
+          child: Icon(icon, size: 18, color: color),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SettingsActionCard extends StatelessWidget {
   const _SettingsActionCard({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.destructive = false,
+    required this.color,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool destructive;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = destructive ? scheme.error : scheme.primary;
-
     return Card(
+      color: AppPalette.of(context).tint(color),
+      elevation: 0,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

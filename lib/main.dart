@@ -10,7 +10,6 @@ import 'screens/history_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/session_timer_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/help_screen.dart';
 import 'services/auto_backup_service.dart';
 import 'services/hive_service.dart';
 
@@ -55,7 +54,6 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
     HistoryScreen(),
     ReportScreen(),
     SettingsScreen(),
-    HelpScreen(),
   ];
 
   @override
@@ -70,13 +68,23 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
     final settings = context.read<SettingsProvider>();
     final sessions = context.read<SessionProvider>();
 
-    await settings.load();
-    await sessions.load();
-    await _autoBackupService.runDailyBackupIfNeeded(
-      sessions: sessions.sessions,
-      settings: settings.settings,
-      onBackupDone: settings.setLastAutoBackupAt,
-    );
+    // A failing step (e.g. secure storage) must not leave the app stuck on
+    // the loading screen.
+    try {
+      await settings.load();
+    } catch (e) {
+      debugPrint('Settings load failed: $e');
+    }
+    try {
+      await sessions.load();
+      await _autoBackupService.runDailyBackupIfNeeded(
+        sessions: sessions.sessions,
+        settings: settings.settings,
+        onBackupDone: settings.setLastAutoBackupAt,
+      );
+    } catch (e) {
+      debugPrint('Sessions load or backup failed: $e');
+    }
     await _pullSharedUrlFromNative();
     if (mounted) setState(() => _ready = true);
   }
@@ -122,6 +130,15 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
     const softOrange = Color(0xFFE59A43);
     const darkSurface = Color(0xFF11161F);
     const darkCard = Color(0xFF1A2230);
+    // Compact labels keep "Historique" on one line on narrow phones, even
+    // with a larger system font size.
+    const navigationBarTheme = NavigationBarThemeData(
+      labelTextStyle: WidgetStatePropertyAll(
+        TextStyle(fontSize: 11, letterSpacing: 0, fontWeight: FontWeight.w500),
+      ),
+    );
+    const lightAccent = Color(0xFF2F6FDE);
+    const darkAccent = Color(0xFF9CC3FF);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -135,6 +152,17 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
       ],
       theme: ThemeData(
         useMaterial3: true,
+        navigationBarTheme: navigationBarTheme.copyWith(
+          backgroundColor: Colors.white,
+          indicatorColor: lightAccent.withValues(alpha: 0.18),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? lightAccent
+                  : deepBlue.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: deepBlue,
           primary: deepBlue,
@@ -152,15 +180,26 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: false,
-          backgroundColor: Colors.white,
-          foregroundColor: deepBlue,
+          backgroundColor: deepBlue,
+          foregroundColor: Colors.white,
         ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
+        navigationBarTheme: navigationBarTheme.copyWith(
+          backgroundColor: darkCard,
+          indicatorColor: darkAccent.withValues(alpha: 0.22),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? darkAccent
+                  : Colors.white70,
+            ),
+          ),
+        ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: deepBlue,
-          primary: const Color(0xFF9CC3FF),
+          primary: darkAccent,
           secondary: const Color(0xFF69C98B),
           tertiary: softOrange,
           surface: darkSurface,
@@ -173,6 +212,11 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+        ),
+        appBarTheme: const AppBarTheme(
+          centerTitle: false,
+          backgroundColor: darkCard,
+          foregroundColor: darkAccent,
         ),
       ),
       themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
@@ -211,11 +255,6 @@ class _JobTimeProofAppState extends State<JobTimeProofApp>
                     icon: Icon(Icons.settings_outlined),
                     selectedIcon: Icon(Icons.settings),
                     label: 'Réglages',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.menu_book_outlined),
-                    selectedIcon: Icon(Icons.menu_book),
-                    label: 'Aide',
                   ),
                 ],
               ),

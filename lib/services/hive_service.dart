@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../models/app_settings.dart';
 import '../models/job_proof.dart';
@@ -28,8 +31,24 @@ class HiveService {
     try {
       await Hive.openBox<T>(boxName);
     } catch (_) {
+      await _backupBoxFile(boxName);
       await Hive.deleteBoxFromDisk(boxName);
       await Hive.openBox<T>(boxName);
+    }
+  }
+
+  // Keep a copy of the unreadable file so its data can still be recovered.
+  static Future<void> _backupBoxFile(String boxName) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/$boxName.hive');
+      if (await file.exists()) {
+        await file.copy(
+          '${dir.path}/${boxName}_corrupt_${DateTime.now().millisecondsSinceEpoch}.hive',
+        );
+      }
+    } catch (_) {
+      // Best effort: never block startup.
     }
   }
 
